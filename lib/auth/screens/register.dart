@@ -26,8 +26,10 @@ class RegisterScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // App Logo and Title
-                const Icon(Icons.fastfood_rounded,
-                    color: AppTheme.primaryColor, size: 60),
+                Image.asset(
+                  'assets/NU-Dine.png', // <-- Use your NU-Dine logo here
+                  height: 180, // Adjust the size as needed
+                ),
                 const SizedBox(height: 16),
                 const Text(
                   'Create Your Account',
@@ -61,14 +63,16 @@ class RegisterScreen extends StatelessWidget {
   }
 
   // Builds the content for the Register form
+  // Builds the content for the Register form
   Widget _buildRegisterForm(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center, // <-- ensures centering
       children: [
-        const Align(
-          alignment: Alignment.centerLeft,
-          child: Text('Sign Up',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+        const Text(
+          'Sign Up',
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center, // <-- centers text
         ),
         const SizedBox(height: 24),
         const RoleDropdown(),
@@ -110,7 +114,6 @@ class RegisterScreen extends StatelessWidget {
           label: 'Already have an account?',
           buttonText: 'Login',
           onTap: () {
-            // Navigate back to the login screen
             Navigator.pop(context);
           },
         ),

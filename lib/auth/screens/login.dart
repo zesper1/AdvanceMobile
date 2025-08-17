@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../theme/app_theme.dart'; // Make sure this path is correct
-import '../screens/../screens/register.dart'; // Import the new register screen
+import '../../user/user_shops_screen.dart';
+import '../../theme/app_theme.dart';
+import '../screens/../screens/register.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -22,26 +23,26 @@ class LoginScreen extends StatelessWidget {
         ),
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(20.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // App Logo
                 Image.asset(
                   'assets/NU-Dine.png', // Make sure your logo is in this path
-                  height: 80, // Adjust the size as needed
+                  height: 180, // Adjust the size as needed
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 15),
                 const Text(
                   'Welcome Nationalian!',
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
                 ),
                 const Text(
                   'Your campus canteen daily food menu',
                   style:
                       TextStyle(fontSize: 16, color: AppTheme.subtleTextColor),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 30),
 
                 // The main card containing the login form
                 Card(
@@ -64,49 +65,70 @@ class LoginScreen extends StatelessWidget {
   }
 
   // Builds the content for the Login form
+  // Builds the content for the Login form
   Widget _buildLoginForm(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center, // <-- Center horizontally
       children: [
         const Align(
-          alignment: Alignment.centerLeft,
-          child: Text('Login',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          alignment: Alignment.center,
+          child: Text(
+            'Login',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
         ),
         const SizedBox(height: 24),
+
+        // Role Dropdown
         const RoleDropdown(),
         const SizedBox(height: 16),
+
+        // Email Field
         const TextField(
+          textAlign: TextAlign.start, // <-- Align input text to the left
           decoration: InputDecoration(
             hintText: 'Email Address',
             prefixIcon: Icon(Icons.email_outlined),
           ),
         ),
         const SizedBox(height: 16),
+
+// Password Field
         const TextField(
           obscureText: true,
+          textAlign: TextAlign.start,
           decoration: InputDecoration(
             hintText: 'Password',
             prefixIcon: Icon(Icons.lock_outline_rounded),
           ),
         ),
-        const SizedBox(height: 24),
+
+// Add margin before the button
+        const SizedBox(height: 20), // <-- Top margin for Sign In button
+
+// Sign In Button
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
             onPressed: () {
-              // Handle login logic
+              // For now, just navigate directly to UserShopsScreen
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const UserShopsScreen(),
+                ),
+              );
             },
             child: const Text('Sign In'),
           ),
         ),
-        const SizedBox(height: 16),
+        // Register Switch
         _buildAuthSwitch(
           context: context,
           label: "Don't have an account?",
           buttonText: 'Register',
           onTap: () {
-            // Navigate to the RegisterScreen
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const RegisterScreen()),
@@ -146,7 +168,7 @@ class RoleDropdown extends StatefulWidget {
 }
 
 class _RoleDropdownState extends State<RoleDropdown> {
-  final List<String> _roles = ['Student', 'Seller', 'Admin'];
+  final List<String> _roles = ['Student', 'Seller'];
   String? _selectedRole;
 
   @override

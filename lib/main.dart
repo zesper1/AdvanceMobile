@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
-import './auth/screens/login.dart'; // <-- Import the login screen
-import 'theme/app_theme.dart'; // <-- Import your theme
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // <-- Import Riverpod
+import './auth/screens/login.dart';
+import 'theme/app_theme.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    const ProviderScope(
+      // <-- Wrap the whole app here
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -13,9 +19,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Food App',
-      theme: AppTheme.lightTheme, // <-- Apply your custom theme
+      theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
-      home: const LoginScreen(), // <-- Set LoginScreen as the home screen
+      home: const LoginScreen(),
     );
   }
 }
