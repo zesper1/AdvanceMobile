@@ -2,8 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:panot/providers/auth_provider.dart';
-import '../user/user_shops_screen.dart'; // This will eventually be replaced by the splash screen's logic
+import '../screens/user/user_shops_screen.dart'; // This will eventually be replaced by the splash screen's logic
 import '../theme/app_theme.dart';
+import '../screens/user/user_shops_screen.dart';
+
 import 'register.dart';
 
 // MODIFIED: Converted to ConsumerStatefulWidget
@@ -104,69 +106,83 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  Widget _buildLoginForm(BuildContext context, bool isLoading) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        const Align(
-          alignment: Alignment.center,
-          child: Text('Login',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+Widget _buildLoginForm(BuildContext context, bool isLoading) {
+  return Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.center,
+    children: [
+      const Align(
+        alignment: Alignment.center,
+        child: Text('Login',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+      ),
+      const SizedBox(height: 24),
+      const RoleDropdown(),
+      const SizedBox(height: 16),
+      TextField(
+        controller: _emailController,
+        keyboardType: TextInputType.emailAddress,
+        decoration: const InputDecoration(
+          hintText: 'Email Address',
+          prefixIcon: Icon(Icons.email_outlined),
         ),
-        const SizedBox(height: 24),
-        // Note: RoleDropdown logic is not yet connected.
-        const RoleDropdown(),
-        const SizedBox(height: 16),
-        // MODIFIED: Use controller for Email Field
-        TextField(
-          controller: _emailController,
-          keyboardType: TextInputType.emailAddress,
-          decoration: const InputDecoration(
-            hintText: 'Email Address',
-            prefixIcon: Icon(Icons.email_outlined),
+      ),
+      const SizedBox(height: 16),
+      TextField(
+        controller: _passwordController,
+        obscureText: true,
+        decoration: const InputDecoration(
+          hintText: 'Password',
+          prefixIcon: Icon(Icons.lock_outline_rounded),
+        ),
+      ),
+      const SizedBox(height: 20),
+      SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: isLoading ? null : _signIn,
+          child: isLoading
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white),
+                )
+              : const Text('Sign In'),
+        ),
+      ),
+      _buildAuthSwitch(
+        context: context,
+        label: "Don't have an account?",
+        buttonText: 'Register',
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const RegisterScreen()),
+          );
+        },
+      ),
+      const SizedBox(height: 12),
+      // 👇 ADD THIS: USER END button
+      TextButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        },
+        child: const Text(
+          'USER END',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppTheme.primaryColor,
           ),
         ),
-        const SizedBox(height: 16),
-        // MODIFIED: Use controller for Password Field
-        TextField(
-          controller: _passwordController,
-          obscureText: true,
-          decoration: const InputDecoration(
-            hintText: 'Password',
-            prefixIcon: Icon(Icons.lock_outline_rounded),
-          ),
-        ),
-        const SizedBox(height: 20),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            // MODIFIED: Call _signIn and disable button while loading
-            onPressed: isLoading ? null : _signIn,
-            child: isLoading
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                  )
-                : const Text('Sign In'),
-          ),
-        ),
-        _buildAuthSwitch(
-          context: context,
-          label: "Don't have an account?",
-          buttonText: 'Register',
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const RegisterScreen()),
-            );
-          },
-        ),
-      ],
-    );
-  }
-  
+      ),
+    ],
+  );
+}
+
   // _buildAuthSwitch remains the same...
   Widget _buildAuthSwitch({
     required BuildContext context,
