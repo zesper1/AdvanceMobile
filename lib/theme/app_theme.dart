@@ -21,12 +21,12 @@ class AppTheme {
 
     // Defines the visual properties of an AppBar.
     appBarTheme: AppBarTheme(
-      backgroundColor: primaryColor,
+      backgroundColor: Colors.white,
       elevation: 0,
-      iconTheme: const IconThemeData(color: Colors.white),
+      iconTheme: const IconThemeData(color: primaryColor),
       titleTextStyle: GoogleFonts.poppins(
-        color: Colors.white,
-        fontSize: 20,
+        color: textColor,
+        fontSize: 22,
         fontWeight: FontWeight.w600,
       ),
     ),
