@@ -77,7 +77,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset('assets/NU-Dine.png', height: 180),
+                Image.asset('assets/bb.jpg', height: 180),
                 const SizedBox(height: 15),
                 const Text('Welcome Nationalian!',
                     style:
@@ -163,7 +163,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           },
         ),
         const SizedBox(height: 12),
-        
+
         // 👇 ADD THIS: Quick Access Section
         const Text(
           'Quick Access',
@@ -174,7 +174,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        
+
         // 👇 USER END Button
         Container(
           width: double.infinity,
@@ -199,7 +199,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
         ),
-        
+
         // 👇 SELLER VIEW Button
         Container(
           width: double.infinity,
