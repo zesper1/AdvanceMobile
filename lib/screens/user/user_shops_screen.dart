@@ -35,19 +35,76 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final popularShops = ref.watch(popularShopsProvider);
     final favoriteShops = ref.watch(favoriteShopsProvider);
     final openShops = ref.watch(currentlyOpenShopsProvider);
-    
-    final categoryShops = _selectedCategory == 'All' 
-        ? allStalls 
+
+    final categoryShops = _selectedCategory == 'All'
+        ? allStalls
         : ref.watch(stallsByCategoryProvider(_selectedCategory));
 
     final categories = allStalls.map((stall) => stall.category).toSet().toList();
     categories.insert(0, 'All');
+
+    // TODO: Replace this with the actual user's name from your auth/user provider
+    final String userName = "Juan Dela Cruz";
+    final String firstName = userName.split(' ').first;
+
+    // --- Welcome Section ---
+    Widget welcomeSection = Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(12, 20, 16, 16), // push content a bit to the left
+      padding: const EdgeInsets.fromLTRB(8, 20, 20, 20), // more left padding, less right
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryColor.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+        // No visible border
+        border: Border.all(color: Colors.transparent, width: 0),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          RichText(
+            text: TextSpan(
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textColor,
+              ),
+              children: [
+                const TextSpan(text: 'Welcome Nationalian '),
+                TextSpan(
+                  text: '($firstName)',
+                  style: const TextStyle(
+                    color: Color(0xFF1976D2), // Blue color for the name
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Here is your daily Nationalian Canteen menu...',
+            style: TextStyle(
+              fontSize: 15,
+              color: AppTheme.textColor.withOpacity(0.93),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
 
     return Scaffold(
       appBar: _buildAppBar(),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8.0),
         children: [
+          welcomeSection,
           _buildStallSection('Popular Shops', popularShops, isHorizontal: true, cardType: 'vertical'),
           _buildStallSection('Favorites', favoriteShops, isHorizontal: true, cardType: 'vertical'),
           _buildStallSection('Currently Open', openShops, isHorizontal: false, cardType: 'horizontal'),
@@ -60,59 +117,83 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: AppTheme.accentColor,
-      elevation: 0,
-      centerTitle: true,
-      title: Container(
-        height: 80,
-        margin: const EdgeInsets.only(top: 16), // Add margin to the top
-        child: Image.asset(
-          'assets/NU-Dine.png', // Use your actual logo asset
-          height: 80,
-        ),
-      ),
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(80),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-          child: Container(
-            height: 50,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.2),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(130),
+      child: Stack(
+        children: [
+          AppBar(
+            elevation: 0,
+            centerTitle: true,
+            backgroundColor: Colors.transparent,
+            flexibleSpace: Opacity(
+              opacity: 0.7, // Lower the opacity of the background image
+              child: Container(
+                decoration: const BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage('assets/NU-D.jpg'), // Use your actual background image
+                    fit: BoxFit.cover,
+                  ),
                 ),
-              ],
-            ),
-            child: TextField(
-              controller: _searchController,
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                hintText: 'Looking for something?',
-                prefixIcon: Icon(Icons.search, color: AppTheme.subtleTextColor),
               ),
-              onTap: () {
-                if (_searchController.text == 'Looking for something?') {
-                  setState(() {
-                    _searchController.clear();
-                  });
-                }
-              },
-              onChanged: (value) {
-                ref.read(foodStallProvider.notifier).searchStalls(value);
-              },
-              onSubmitted: (value) {
-                ref.read(foodStallProvider.notifier).searchStalls(value);
-              },
+            ),
+            title: null,
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(80),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+                child: Container(
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      hintText: 'Looking for something?',
+                      prefixIcon: Icon(Icons.search, color: Color.fromARGB(255, 214, 31, 31)),
+                    ),
+                    onTap: () {
+                      if (_searchController.text == 'Looking for something?') {
+                        setState(() {
+                          _searchController.clear();
+                        });
+                      }
+                    },
+                    onChanged: (value) {
+                      ref.read(foodStallProvider.notifier).searchStalls(value);
+                    },
+                    onSubmitted: (value) {
+                      ref.read(foodStallProvider.notifier).searchStalls(value);
+                    },
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
+          // Centered logo on top of the appbar, with margin from the top
+          Positioned(
+            top: 0, // Add margin from the top
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Image.asset(
+                'assets/NU-Dine.png', // Your app logo
+                height: 70,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

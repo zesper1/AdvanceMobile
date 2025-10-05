@@ -5,7 +5,7 @@ import 'package:panot/providers/auth_provider.dart';
 import '../screens/user/user_shops_screen.dart'; // This will eventually be replaced by the splash screen's logic
 import '../theme/app_theme.dart';
 import '../screens/user/user_shops_screen.dart';
-
+import '../screens/seller/seller_home.dart'; // ADD THIS IMPORT
 import 'register.dart';
 
 // MODIFIED: Converted to ConsumerStatefulWidget
@@ -106,82 +106,132 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-Widget _buildLoginForm(BuildContext context, bool isLoading) {
-  return Column(
-    mainAxisSize: MainAxisSize.min,
-    crossAxisAlignment: CrossAxisAlignment.center,
-    children: [
-      const Align(
-        alignment: Alignment.center,
-        child: Text('Login',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-      ),
-      const SizedBox(height: 24),
-      const RoleDropdown(),
-      const SizedBox(height: 16),
-      TextField(
-        controller: _emailController,
-        keyboardType: TextInputType.emailAddress,
-        decoration: const InputDecoration(
-          hintText: 'Email Address',
-          prefixIcon: Icon(Icons.email_outlined),
+  Widget _buildLoginForm(BuildContext context, bool isLoading) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const Align(
+          alignment: Alignment.center,
+          child: Text('Login',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
         ),
-      ),
-      const SizedBox(height: 16),
-      TextField(
-        controller: _passwordController,
-        obscureText: true,
-        decoration: const InputDecoration(
-          hintText: 'Password',
-          prefixIcon: Icon(Icons.lock_outline_rounded),
-        ),
-      ),
-      const SizedBox(height: 20),
-      SizedBox(
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: isLoading ? null : _signIn,
-          child: isLoading
-              ? const SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white),
-                )
-              : const Text('Sign In'),
-        ),
-      ),
-      _buildAuthSwitch(
-        context: context,
-        label: "Don't have an account?",
-        buttonText: 'Register',
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const RegisterScreen()),
-          );
-        },
-      ),
-      const SizedBox(height: 12),
-      // 👇 ADD THIS: USER END button
-      TextButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-          );
-        },
-        child: const Text(
-          'USER END',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: AppTheme.primaryColor,
+        const SizedBox(height: 24),
+        const RoleDropdown(),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(
+            hintText: 'Email Address',
+            prefixIcon: Icon(Icons.email_outlined),
           ),
         ),
-      ),
-    ],
-  );
-}
+        const SizedBox(height: 16),
+        TextField(
+          controller: _passwordController,
+          obscureText: true,
+          decoration: const InputDecoration(
+            hintText: 'Password',
+            prefixIcon: Icon(Icons.lock_outline_rounded),
+          ),
+        ),
+        const SizedBox(height: 20),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: isLoading ? null : _signIn,
+            child: isLoading
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
+                  )
+                : const Text('Sign In'),
+          ),
+        ),
+        _buildAuthSwitch(
+          context: context,
+          label: "Don't have an account?",
+          buttonText: 'Register',
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const RegisterScreen()),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        
+        // 👇 ADD THIS: Quick Access Section
+        const Text(
+          'Quick Access',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.subtleTextColor,
+          ),
+        ),
+        const SizedBox(height: 8),
+        
+        // 👇 USER END Button
+        Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 8),
+          child: OutlinedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const HomeScreen()),
+              );
+            },
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.primaryColor,
+              side: BorderSide(color: AppTheme.primaryColor),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            child: const Text(
+              'USER VIEW',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+        
+        // 👇 SELLER VIEW Button
+        Container(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: () {
+              // Navigate to seller home screen with a demo seller ID and name
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SellerHomeScreen(
+                    sellerId: 'demo_seller_001',
+                    sellerName: 'Ate Smol', // Pass actual seller name
+                  ),
+                ),
+              );
+            },
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.accentColor,
+              side: BorderSide(color: AppTheme.accentColor),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            child: const Text(
+              'SELLER VIEW',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   // _buildAuthSwitch remains the same...
   Widget _buildAuthSwitch({

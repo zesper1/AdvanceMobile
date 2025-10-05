@@ -2,11 +2,11 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-class SellerBottomNavBar extends StatefulWidget {
+class SellerBottomNavBar extends StatefulWidget { // Changed from SellerNavBar to SellerBottomNavBar
   final int initialIndex;
   final Function(int) onTabChanged;
 
-  const SellerBottomNavBar({
+  const SellerBottomNavBar({ // Changed constructor name
     super.key,
     this.initialIndex = 0,
     required this.onTabChanged,
@@ -53,12 +53,16 @@ class _SellerBottomNavBarState extends State<SellerBottomNavBar> {
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
+            icon: Icon(Icons.store),
+            label: 'Shops',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.pending_actions),
+            label: 'Pending Requests',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
-            label: 'Account',
+            label: 'My Account',
           ),
         ],
       ),
