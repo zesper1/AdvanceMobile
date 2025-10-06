@@ -3,10 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
 import '../../models/seller_shop_model.dart';
 import '../../providers/seller_shop_provider.dart';
-import '../../theme/app_theme.dart';
 import '../../models/category_model.dart' as categ; // Import your Category and Subcategory models
 import '../../providers/category_provider.dart'; // Import your category providers
 
@@ -159,12 +157,13 @@ Future<void> _submitForm() async {
 
       // Create a list of subcategory IDs to send for the update.
       final List<int> subcategoryIdsToSubmit = _selectedSubcategories.map((e) => e.id).toList();
-
+      print(subcategoryIdsToSubmit);
       await ref.read(sellerShopProvider.notifier).updateShop(
             shopId: widget.shopToUpdate!.id,
             shopName: _nameController.text,
             description: _descriptionController.text,
-            newImageFile: _pickedImage,
+            newImageFile: _pickedImage ?? 
+              (widget.shopToUpdate!.imageUrl == null ? _pickedImage : null),
             openingTime: _openingTime,
             closingTime: _closingTime,
             categoryId: _selectedMainCategory!.id, // CORRECTED: Pass the integer ID
@@ -174,7 +173,7 @@ Future<void> _submitForm() async {
       // --- CREATE LOGIC ---
 
       // For creation, the RPC is smart enough to look up names.
-      final List<String> subcategoryNamesToSubmit = _selectedSubcategories.map((e) => e.name).toList();
+      final List<int> subcategoryIdsToSubmit = _selectedSubcategories.map((e) => e.id).toList();
 
       await ref.read(sellerShopProvider.notifier).addShop(
             shopName: _nameController.text,
@@ -182,8 +181,8 @@ Future<void> _submitForm() async {
             imageFile: _pickedImage!,
             openingTime: _openingTime,
             closingTime: _closingTime,
-            categoryName: _selectedMainCategory!.name, // CORRECTED: Pass the string name
-            subcategoryNames: subcategoryNamesToSubmit, // This remains a list of names for 'create'
+            categoryName: _selectedMainCategory!.id, // CORRECTED: Pass the string name
+            subcategoryNames: subcategoryIdsToSubmit, // This remains a list of names for 'create'
           );
     }
     

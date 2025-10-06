@@ -17,8 +17,8 @@ class ShopService {
     required XFile imageFile, // CHANGED: Accepts the full XFile object
     required TimeOfDay openingTime,
     required TimeOfDay closingTime,
-    required String categoryName,
-    required List<String> subcategoryNames,
+    required int categoryName,
+    required List<int> subcategoryNames,
   }) async {
     try {
       final sellerId = _supabase.auth.currentUser?.id;
@@ -63,15 +63,15 @@ class ShopService {
         'p_seller_id': sellerId,
         'p_shop_name': shopName,
         'p_description': description,
-        'p_logo_url': logoUrl,
+        'p_image_url': logoUrl,
         'p_opening_time': openingTimeStr,
         'p_closing_time': closingTimeStr,
-        'p_category_name': categoryName,
-        'p_subcategory_names': subcategoryNames,
+        'p_category_id': categoryName,
+        'p_subcategory_ids': subcategoryNames,
       };
 
       final newShopId = await _supabase.rpc(
-        'create_shop_with_subcategories',
+        'create_shop_with_subcategories_by_id',
         params: params,
       );
 

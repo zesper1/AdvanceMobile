@@ -55,7 +55,7 @@ factory SellerShop.fromJson(Map<String, dynamic> json) {
     name: json['name'] as String? ?? 'Unnamed Shop',
 
     // This was already safe since imageUrl is nullable.
-    imageUrl: json['image_url'] as String?,
+    imageUrl: json['image_url'] as String ?? 'https://media.licdn.com/dms/image/v2/C560BAQHvjs3O4Utmdw/company-logo_200_200/company-logo_200_200/0/1631351760522?e=2147483647&v=beta&t=98Nb6ha1qF7VFgRtzDHP0WzmNbTlI_r26j4Q4rm3nMg',
 
     // Provide defaults for time strings.
     openingTime: json['opening_time'] as String? ?? '00:00:00',

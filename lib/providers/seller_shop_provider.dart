@@ -22,8 +22,8 @@ class SellerShopNotifier extends AutoDisposeAsyncNotifier<List<SellerShop>> {
     required XFile imageFile,
     required TimeOfDay openingTime,
     required TimeOfDay closingTime,
-    required String categoryName,
-    required List<String> subcategoryNames,
+    required int categoryName,
+    required List<int> subcategoryNames,
   }) async {
     state = const AsyncValue.loading();
     // Use AsyncValue.guard to handle potential errors from the service.
