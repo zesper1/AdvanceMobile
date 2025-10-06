@@ -1,10 +1,23 @@
 // models/seller_shop_model.dart
+
 enum ShopStatus { Pending, Approved, Rejected }
+
+// Helper function to parse the enum safely
+ShopStatus _parseShopStatus(String status) {
+  switch (status.toLowerCase()) {
+    case 'approved':
+      return ShopStatus.Approved;
+    case 'rejected':
+      return ShopStatus.Rejected;
+    default:
+      return ShopStatus.Pending;
+  }
+}
 
 class SellerShop {
   final String id;
   final String name;
-  final String imageUrl;
+  final String? imageUrl;
   final String openingTime;
   final String closingTime;
   final String category;
@@ -15,10 +28,10 @@ class SellerShop {
   final List<String> customCategories;
   final DateTime createdAt;
 
-  SellerShop({     
+  SellerShop({
     required this.id,
     required this.name,
-    required this.imageUrl,
+    this.imageUrl,
     required this.openingTime,
     required this.closingTime,
     required this.category,
@@ -30,33 +43,25 @@ class SellerShop {
     required this.createdAt,
   });
 
-  SellerShop copyWith({
-    String? id,
-    String? name,
-    String? imageUrl,
-    String? openingTime,
-    String? closingTime,
-    String? category,
-    double? rating,
-    String? description,
-    String? sellerId,
-    ShopStatus? status,
-    List<String>? customCategories,
-    DateTime? createdAt,
-  }) {
+  // Factory constructor to create a SellerShop from a JSON map
+  factory SellerShop.fromJson(Map<String, dynamic> json) {
+    // Note: The keys here must match the column names from your database/view.
+    // This example assumes we are querying a view that provides all necessary fields.
     return SellerShop(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      imageUrl: imageUrl ?? this.imageUrl,
-      openingTime: openingTime ?? this.openingTime,
-      closingTime: closingTime ?? this.closingTime,
-      category: category ?? this.category,
-      rating: rating ?? this.rating,
-      description: description ?? this.description,
-      sellerId: sellerId ?? this.sellerId,
-      status: status ?? this.status,
-      customCategories: customCategories ?? this.customCategories,
-      createdAt: createdAt ?? this.createdAt,
+      id: json['id'].toString(), // Convert int from DB to String
+      name: json['name'] as String,
+      imageUrl: json['image_url'] as String?,
+      openingTime: json['opening_time'] as String,
+      closingTime: json['closing_time'] as String,
+      // You'll need a view that joins to get the category name
+      category: json['category_name'] as String? ?? 'N/A', 
+      rating: (json['rating'] as num).toDouble(),
+      description: json['description'] as String?,
+      sellerId: json['seller_id'] as String,
+      status: _parseShopStatus(json['status'] as String),
+      // This assumes custom_categories is a text array in PostgreSQL
+      customCategories: List<String>.from(json['custom_categories'] ?? []),
+      createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
 }

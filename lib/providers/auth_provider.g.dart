@@ -56,12 +56,12 @@ final authStateChangeProvider = AutoDisposeStreamProvider<AuthState>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef AuthStateChangeRef = AutoDisposeStreamProviderRef<AuthState>;
-String _$authNotifierHash() => r'464f214e2c99aae1147ebb245dc864aff41cd36b';
+String _$authNotifierHash() => r'400c447c6bdc901be71f7023e07184ac1ca7e488';
 
 /// See also [AuthNotifier].
 @ProviderFor(AuthNotifier)
 final authNotifierProvider =
-    AsyncNotifierProvider<AuthNotifier, Map<String, dynamic>?>.internal(
+    AsyncNotifierProvider<AuthNotifier, UserProfile?>.internal(
   AuthNotifier.new,
   name: r'authNotifierProvider',
   debugGetCreateSourceHash:
@@ -70,6 +70,6 @@ final authNotifierProvider =
   allTransitiveDependencies: null,
 );
 
-typedef _$AuthNotifier = AsyncNotifier<Map<String, dynamic>?>;
+typedef _$AuthNotifier = AsyncNotifier<UserProfile?>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

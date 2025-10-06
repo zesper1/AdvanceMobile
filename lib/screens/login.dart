@@ -31,26 +31,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   // NEW: Function to handle the sign-in logic
   Future<void> _signIn() async {
-    // Hide keyboard
-    FocusScope.of(context).unfocus();
+    // ... show loading indicator ...
 
-    // Call the signIn method from our notifier
-    await ref.read(authNotifierProvider.notifier).signIn(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-        );
-
-    // After attempting sign-in, check if there's an error
-    // We check `mounted` to ensure the widget is still in the tree
-    if (ref.read(authNotifierProvider).hasError && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(ref.read(authNotifierProvider).error.toString()),
-          backgroundColor: Colors.red,
-        ),
+    try {
+      // Await the sign-in process
+      await ref.read(authNotifierProvider.notifier).signIn(
+        email: _emailController.text,
+        password: _passwordController.text,
       );
+      if (!mounted) return;
+
+
+    } catch (e) {
+      // Also check if mounted before showing an error.
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Sign-in failed: $e')),
+      );
+    } finally {
+      // Also check if mounted before hiding a loading indicator.
+      if (mounted) {
+        // ... hide loading indicator ...
+      }
     }
-    // No need for success navigation here, the SplashScreen will handle it!
   }
 
   @override

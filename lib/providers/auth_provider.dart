@@ -1,5 +1,6 @@
 // lib/providers/auth_provider.dart
 import 'dart:async';
+import 'package:panot/models/user_model.dart';
 import 'package:panot/services/auth_services.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -15,15 +16,17 @@ part 'auth_provider.g.dart';
 @Riverpod(keepAlive: true)
 class AuthNotifier extends _$AuthNotifier {
   @override
-  Future<Map<String, dynamic>?> build() async {
-    // ... (build method remains the same) ...
+  Future<UserProfile?> build() async {
     final authService = ref.watch(authServiceProvider);
     final authState = await ref.watch(authStateChangeProvider.future);
     final session = authState.session;
 
     if (session != null) {
       try {
-        return await authService.fetchUserProfile(session.user.id);
+        final profileMap = await authService.fetchUserProfile(session.user.id);
+        if (profileMap != null) {
+          return UserProfile.fromJson(profileMap);
+        }
       } catch (e) {
         print("Error in AuthNotifier build: $e");
         await authService.signOut();

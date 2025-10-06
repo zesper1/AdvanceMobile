@@ -30,7 +30,6 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
   String _selectedCategory = 'All';
   String _selectedStatus = 'All'; // 'All', 'Open', 'Closed'
   int _currentIndex = 0;
-  int _currentTabIndex = 0; // 0: My Shops, 1: Pending, 2: All Shops
 
   @override
   void initState() {
@@ -145,75 +144,66 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
   }
 
   Widget _buildShopsScreen() {
-    final approvedShops = ref.watch(sellerApprovedShopsProvider(widget.sellerId));
-    final pendingShops = ref.watch(sellerPendingShopsProvider(widget.sellerId));
-    final allShops = ref.watch(foodStallProvider);
+    final shopsAsyncValue = ref.watch(sellerShopProvider);
 
-    return Column(
-      children: [
-        // Welcome Section with Stats
-        _buildWelcomeSection(approvedShops.length, pendingShops.length),
+    return shopsAsyncValue.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(child: Text('Failed to load shops: $error')),
+      data: (allMyShops) {
+        final approvedShops = allMyShops.where((s) => s.status == ShopStatus.Approved).toList();
+        final pendingShops = allMyShops.where((s) => s.status == ShopStatus.Pending).toList();
         
-        // Main Content with Tabs
-        Expanded(
-          child: DefaultTabController(
-            length: 3,
-            child: Column(
-              children: [
-                // Custom Tab Bar with better styling
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.1),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
+        // This provider is for the "All Shops" tab for customer view, keep it separate if needed.
+        final allShopsForCustomerView = ref.watch(foodStallProvider);
+
+        return Column(
+          children: [
+            _buildWelcomeSection(approvedShops.length, pendingShops.length),
+            Expanded(
+              child: DefaultTabController(
+                length: 3,
+                child: Column(
+                  children: [
+                    Container(
+                      // Your TabBar styling
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: TabBar(
-                    labelColor: AppTheme.primaryColor,
-                    unselectedLabelColor: AppTheme.subtleTextColor,
-                    indicatorColor: AppTheme.primaryColor,
-                    indicatorWeight: 3,
-                    labelStyle: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                      child: TabBar(
+                        labelColor: AppTheme.primaryColor,
+                        unselectedLabelColor: AppTheme.subtleTextColor,
+                        indicatorColor: AppTheme.primaryColor,
+                        // ... other TabBar properties
+                        tabs: const [
+                          Tab(text: 'My Shops'),
+                          Tab(text: 'Pending'),
+                          Tab(text: 'All Shops'),
+                        ],
+                      ),
                     ),
-                    unselectedLabelStyle: const TextStyle(
-                      fontWeight: FontWeight.normal,
-                      fontSize: 14,
+                    Expanded(
+                      child: TabBarView(
+                        children: [
+                          _buildMyShopsTab(approvedShops),
+                          _buildPendingTab(pendingShops),
+                          _buildAllShopsTab(allShopsForCustomerView),
+                        ],
+                      ),
                     ),
-                    tabs: const [
-                      Tab(text: 'My Shops'),
-                      Tab(text: 'Pending'),
-                      Tab(text: 'All Shops'),
-                    ],
-                    onTap: (index) {
-                      setState(() {
-                        _currentTabIndex = index;
-                      });
-                    },
-                  ),
+                  ],
                 ),
-                Expanded(
-                  child: TabBarView(
-                    children: [
-                      // My Shops Tab
-                      _buildMyShopsTab(approvedShops),
-                      // Pending Requests Tab
-                      _buildPendingTab(pendingShops),
-                      // All Shops Tab
-                      _buildAllShopsTab(allShops),
-                    ],
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 
@@ -621,7 +611,7 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: Image.network(
-            shop.imageUrl,
+            shop.imageUrl!,
             width: 50,
             height: 50,
             fit: BoxFit.cover,
@@ -711,7 +701,7 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: Image.network(
-            shop.imageUrl,
+            shop.imageUrl!,
             width: 50,
             height: 50,
             fit: BoxFit.cover,
@@ -807,7 +797,7 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => CreateShopScreen(sellerId: widget.sellerId),
+            builder: (context) => const CreateShopScreen(),
           ),
         );
       },

@@ -28,7 +28,7 @@ class HomePage extends ConsumerWidget {
           child: profile == null
               ? const Text('Welcome! Profile not found.')
               : Text(
-                  'Welcome, ${profile['first_name']}!',
+                  'Welcome, ${profile.fullName}!',
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
         ),

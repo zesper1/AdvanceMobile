@@ -5,14 +5,14 @@ import '../../models/seller_shop_model.dart';
 import '../../providers/seller_shop_provider.dart';
 import '../../theme/app_theme.dart';
 
+// The sellerId is no longer needed as the provider is user-aware.
 class SellerPendingRequestsScreen extends ConsumerWidget {
-  final String sellerId;
-
-  const SellerPendingRequestsScreen({super.key, required this.sellerId});
+  const SellerPendingRequestsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pendingShops = ref.watch(sellerPendingShopsProvider(sellerId));
+    // Watch the new provider for pending shops.
+    final pendingShopsAsync = ref.watch(sellerPendingShopsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -20,8 +20,18 @@ class SellerPendingRequestsScreen extends ConsumerWidget {
         backgroundColor: AppTheme.primaryColor,
         foregroundColor: Colors.white,
       ),
-      body: pendingShops.isEmpty
-          ? const Center(
+      // Use .when() to handle the different states of the async data.
+      body: pendingShopsAsync.when(
+        // 1. Show a loading indicator while fetching.
+        loading: () => const Center(child: CircularProgressIndicator()),
+        
+        // 2. Show an error message if something goes wrong.
+        error: (err, stack) => Center(child: Text('Error: $err')),
+        
+        // 3. Show the data when it's available.
+        data: (pendingShops) {
+          if (pendingShops.isEmpty) {
+            return const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -44,18 +54,23 @@ class SellerPendingRequestsScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: pendingShops.length,
-              itemBuilder: (context, index) {
-                final shop = pendingShops[index];
-                return _buildPendingShopCard(shop);
-              },
-            ),
+            );
+          }
+          // If data is not empty, build the list.
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: pendingShops.length,
+            itemBuilder: (context, index) {
+              final shop = pendingShops[index];
+              return _buildPendingShopCard(shop);
+            },
+          );
+        },
+      ),
     );
   }
 
+  // This widget builder remains exactly the same.
   Widget _buildPendingShopCard(SellerShop shop) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -69,7 +84,7 @@ class SellerPendingRequestsScreen extends ConsumerWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Image.network(
-                    shop.imageUrl,
+                    shop.imageUrl ?? 'https://placehold.co/60x60', // Handle null imageUrl
                     width: 60,
                     height: 60,
                     fit: BoxFit.cover,

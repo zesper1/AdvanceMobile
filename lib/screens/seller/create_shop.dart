@@ -1,14 +1,13 @@
-// screens/seller/create_shop.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../models/seller_shop_model.dart';
+import 'package:image_picker/image_picker.dart'; // Import for image picker
+import 'package:intl/intl.dart'; // For formatting time
 import '../../providers/seller_shop_provider.dart';
 import '../../theme/app_theme.dart';
 
 class CreateShopScreen extends ConsumerStatefulWidget {
-  final String sellerId;
-
-  const CreateShopScreen({super.key, required this.sellerId});
+  const CreateShopScreen({super.key});
 
   @override
   ConsumerState<CreateShopScreen> createState() => _CreateShopScreenState();
@@ -17,32 +16,59 @@ class CreateShopScreen extends ConsumerStatefulWidget {
 class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _openingTimeController = TextEditingController();
-  final TextEditingController _closingTimeController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _customCategoryController = TextEditingController();
 
+  // State for the picked image file
+  XFile? _pickedImage;
+
+  // State for time pickers
+  TimeOfDay _openingTime = const TimeOfDay(hour: 9, minute: 0);
+  TimeOfDay _closingTime = const TimeOfDay(hour: 22, minute: 0);
+
   String _selectedCategory = 'Snack';
-  String _imageUrl = 'https://placehold.co/600x400/FFF4E0/000000?text=Shop+Image';
   List<String> _customCategories = [];
+  bool _isLoading = false;
 
-  final List<String> _mainCategories = ['Snack', 'Drink', 'Meal'];
-
-  @override
-  void initState() {
-    super.initState();
-    _openingTimeController.text = '09:00 AM';
-    _closingTimeController.text = '10:00 PM';
-  }
+  final List<String> _mainCategories = ['Snack', 'Drink', 'Meal', 'Food'];
 
   @override
   void dispose() {
     _nameController.dispose();
-    _openingTimeController.dispose();
-    _closingTimeController.dispose();
     _descriptionController.dispose();
     _customCategoryController.dispose();
     super.dispose();
+  }
+
+  // --- IMAGE PICKER LOGIC ---
+  Future<void> _pickImage() async {
+    final imagePicker = ImagePicker();
+    // Allow the user to pick an image from their gallery
+    final pickedFile = await imagePicker.pickImage(source: ImageSource.gallery);
+
+    // If a file was picked, update the state to rebuild the UI
+    if (pickedFile != null) {
+      setState(() {
+        _pickedImage = pickedFile;
+      });
+    }
+  }
+
+  Future<void> _selectTime(BuildContext context, {required bool isOpeningTime}) async {
+    final TimeOfDay initialTime = isOpeningTime ? _openingTime : _closingTime;
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+    );
+    if (picked != null && picked != initialTime) {
+      setState(() {
+        if (isOpeningTime) {
+          _openingTime = picked;
+        } else {
+          _closingTime = picked;
+        }
+      });
+    }
   }
 
   void _addCustomCategory() {
@@ -60,39 +86,68 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
     });
   }
 
-  void _submitForm() {
-    if (_formKey.currentState!.validate()) {
-      final newShop = SellerShop(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: _nameController.text,
-        imageUrl: _imageUrl,
-        openingTime: _openingTimeController.text,
-        closingTime: _closingTimeController.text,
-        category: _selectedCategory,
-        rating: 0.0,
-        description: _descriptionController.text.isEmpty ? null : _descriptionController.text,
-        sellerId: widget.sellerId,
-        status: ShopStatus.Pending,
-        customCategories: _customCategories,
-        createdAt: DateTime.now(),
-      );
+  Future<void> _submitForm() async {
+    // First, validate the form fields
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
-      // FIXED: Using correct provider name
-      ref.read(sellerShopProvider.notifier).addShop(newShop);
-      
+    // Then, validate that an image has been picked
+    if (_pickedImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Shop created successfully! Waiting for admin approval.'),
-          backgroundColor: Colors.green,
+          content: Text('Please select a shop image.'),
+          backgroundColor: Colors.red,
         ),
       );
-      
-      Navigator.pop(context);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Call the provider's method with the image path
+      await ref.read(sellerShopProvider.notifier).addShop(
+            shopName: _nameController.text,
+            description: _descriptionController.text,
+            logoUrl: _pickedImage!.path, // Pass the local file path
+            openingTime: _openingTime,
+            closingTime: _closingTime,
+            categoryName: _selectedCategory,
+            subcategoryNames: _customCategories,
+          );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Shop created successfully! Waiting for admin approval.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to create shop: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final timeFormatter = DateFormat('h:mm a');
+    final openingTimeText = timeFormatter.format(DateTime(2025, 1, 1, _openingTime.hour, _openingTime.minute));
+    final closingTimeText = timeFormatter.format(DateTime(2025, 1, 1, _closingTime.hour, _closingTime.minute));
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Create New Shop'),
@@ -106,59 +161,35 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Image Section
               _buildImageSection(),
               const SizedBox(height: 24),
-              
-              // Shop Name
               _buildFormField(
                 controller: _nameController,
                 label: 'Shop Name',
                 hintText: 'Enter your shop name',
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a shop name';
-                  }
-                  return null;
-                },
+                validator: (value) => value == null || value.isEmpty ? 'Please enter a shop name' : null,
               ),
               const SizedBox(height: 16),
-
-              // Operating Hours
               Row(
                 children: [
                   Expanded(
-                    child: _buildFormField(
-                      controller: _openingTimeController,
+                    child: _buildTimePickerField(
                       label: 'Opening Time',
-                      hintText: '09:00 AM',
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter opening time';
-                        }
-                        return null;
-                      },
+                      timeText: openingTimeText,
+                      onTap: () => _selectTime(context, isOpeningTime: true),
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: _buildFormField(
-                      controller: _closingTimeController,
+                    child: _buildTimePickerField(
                       label: 'Closing Time',
-                      hintText: '10:00 PM',
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter closing time';
-                        }
-                        return null;
-                      },
+                      timeText: closingTimeText,
+                      onTap: () => _selectTime(context, isOpeningTime: false),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-
-              // Description
               _buildFormField(
                 controller: _descriptionController,
                 label: 'Description (Optional)',
@@ -166,35 +197,25 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
                 maxLines: 3,
               ),
               const SizedBox(height: 16),
-
-              // Main Category
               _buildCategoryDropdown(),
               const SizedBox(height: 24),
-
-              // Custom Categories
               _buildCustomCategoriesSection(),
               const SizedBox(height: 32),
-
-              // Submit Button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _submitForm,
+                  onPressed: _isLoading ? null : _submitForm,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text(
-                    'Create Shop',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
+                          'Create Shop',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
                 ),
               ),
             ],
@@ -223,62 +244,81 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             color: AppTheme.cardColor,
-            image: DecorationImage(
-              image: NetworkImage(_imageUrl),
-              fit: BoxFit.cover,
-            ),
           ),
-          child: Stack(
-            children: [
-              Positioned(
-                bottom: 8,
-                right: 8,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.edit, color: Colors.white, size: 20),
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Edit Image URL'),
-                          content: TextField(
-                            controller: TextEditingController(text: _imageUrl),
-                            onChanged: (value) {
-                              setState(() {
-                                _imageUrl = value;
-                              });
-                            },
-                            decoration: const InputDecoration(
-                              hintText: 'Enter image URL',
-                            ),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Cancel'),
-                            ),
-                            ElevatedButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Save'),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+          // Use ClipRRect to apply border radius to the image
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // Conditionally display the picked image or a placeholder
+                _pickedImage != null
+                    ? Image.file(
+                        File(_pickedImage!.path),
+                        fit: BoxFit.cover,
+                      )
+                    : Image.network(
+                        'https://placehold.co/600x400/EEE/000?text=Select+Image',
+                        fit: BoxFit.cover,
+                      ),
+                // Edit button
+                Positioned(
+                  bottom: 8,
+                  right: 8,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.edit, color: Colors.white, size: 20),
+                      // The button now calls the image picker
+                      onPressed: _pickImage,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ],
     );
   }
-
+  // Refactored widget for time picker fields
+  Widget _buildTimePickerField({
+    required String label,
+    required String timeText,
+    required VoidCallback onTap,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: AppTheme.textColor),
+        ),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: AppTheme.cardColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.transparent),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(timeText, style: const TextStyle(fontSize: 16)),
+                const Icon(Icons.access_time, color: AppTheme.textColor),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
   Widget _buildFormField({
     required TextEditingController controller,
     required String label,
