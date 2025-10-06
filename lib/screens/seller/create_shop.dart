@@ -1,14 +1,19 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart'; // Import for kIsWeb
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart'; // Import for image picker
-import 'package:intl/intl.dart'; // For formatting time
+import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
+import '../../models/seller_shop_model.dart';
 import '../../providers/seller_shop_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../models/category_model.dart' as categ; // Import your Category and Subcategory models
+import '../../providers/category_provider.dart'; // Import your category providers
 
 class CreateShopScreen extends ConsumerStatefulWidget {
-  const CreateShopScreen({super.key});
+  final SellerShop? shopToUpdate;
+
+  const CreateShopScreen({super.key, this.shopToUpdate});
 
   @override
   ConsumerState<CreateShopScreen> createState() => _CreateShopScreenState();
@@ -18,50 +23,102 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-  final TextEditingController _customCategoryController = TextEditingController();
 
   XFile? _pickedImage;
+  String? _existingImageUrl;
   TimeOfDay _openingTime = const TimeOfDay(hour: 9, minute: 0);
   TimeOfDay _closingTime = const TimeOfDay(hour: 22, minute: 0);
-  String? _selectedCategory;
-  List<String> _customCategories = [];
-  bool _isLoading = false;
 
-  final List<String> _mainCategories = ['Beverages', 'Pastry'];
+  // CHANGED: To hold selected Category object
+  categ.Category? _selectedMainCategory;
+  // CHANGED: To hold selected Subcategory objects (for their names)
+  List<categ.Subcategory> _selectedSubcategories = [];
+
+  bool _isLoading = false;
+  bool _isUpdateMode = false;
+  bool _isInit = true; // Flag to run update-mode logic only once
 
   @override
   void initState() {
     super.initState();
-    _selectedCategory = _mainCategories.first;
-  }
+    // We only pre-fill data here if it's NOT dependent on async providers
+    if (widget.shopToUpdate != null) {
+      _isUpdateMode = true;
+      final shop = widget.shopToUpdate!;
+      _nameController.text = shop.name;
+      _descriptionController.text = shop.description ?? '';
+      _existingImageUrl = shop.imageUrl;
 
+      TimeOfDay parseTime(String time) {
+        final parts = time.split(':');
+        return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+      }
+      _openingTime = parseTime(shop.openingTime);
+      _closingTime = parseTime(shop.closingTime);
+    }
+  }
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_isInit) {
+      if (_isUpdateMode) {
+        final categoriesAsync = ref.watch(categoriesProvider);
+        categoriesAsync.whenData((categories) {
+          if (categories.isNotEmpty) {
+            try {
+              final preselectedCategory = categories.firstWhere((c) => c.name == widget.shopToUpdate!.category);
+              final preselectedSubcategoriesFuture = ref.watch(subcategoriesProvider(preselectedCategory.id));
+
+              preselectedSubcategoriesFuture.whenData((subcategories) {
+                final List<categ.Subcategory> preselectedSubs = [];
+                for (var name in widget.shopToUpdate!.customCategories) {
+                  try {
+                    final sub = subcategories.firstWhere((s) => s.name == name);
+                    preselectedSubs.add(sub);
+                  } catch (_) {} // Ignore if not found
+                }
+                // Update state after build
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if(mounted) {
+                    setState(() {
+                      _selectedMainCategory = preselectedCategory;
+                      _selectedSubcategories = preselectedSubs;
+                    });
+                  }
+                });
+              });
+            } catch (_) { /* Category not found, do nothing */ }
+          }
+        });
+      }
+      _isInit = false;
+    }
+  }
   @override
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
-    _customCategoryController.dispose();
     super.dispose();
   }
 
   Future<void> _pickImage() async {
-    final imagePicker = ImagePicker();
-    final pickedFile = await imagePicker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
       setState(() {
-        _pickedImage = pickedFile;
+        _pickedImage = image;
       });
     }
   }
 
-  Future<void> _selectTime(BuildContext context, {required bool isOpeningTime}) async {
-    final TimeOfDay initialTime = isOpeningTime ? _openingTime : _closingTime;
+  Future<void> _selectTime(BuildContext context, bool isOpening) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
-      initialTime: initialTime,
+      initialTime: isOpening ? _openingTime : _closingTime,
     );
-    if (picked != null && picked != initialTime) {
+    if (picked != null) {
       setState(() {
-        if (isOpeningTime) {
+        if (isOpening) {
           _openingTime = picked;
         } else {
           _closingTime = picked;
@@ -70,94 +127,109 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
     }
   }
 
-  void _addCustomCategory() {
-    if (_customCategoryController.text.isNotEmpty) {
-      setState(() {
-        _customCategories.add(_customCategoryController.text);
-        _customCategoryController.clear();
-      });
-    }
+Future<void> _submitForm() async {
+  if (!_formKey.currentState!.validate()) {
+    return;
+  }
+  if (_selectedMainCategory == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Please select a main category.'), backgroundColor: Colors.red),
+    );
+    return;
+  }
+  if (_selectedSubcategories.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Please select at least one subcategory.'), backgroundColor: Colors.red),
+    );
+    return;
   }
 
-  void _removeCustomCategory(int index) {
-    setState(() {
-      _customCategories.removeAt(index);
-    });
+  if (_pickedImage == null && _existingImageUrl == null && !_isUpdateMode) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Please select a shop image.'), backgroundColor: Colors.red),
+    );
+    return;
   }
 
-  Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-    if (_pickedImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a shop image.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
+  setState(() => _isLoading = true);
 
-    setState(() => _isLoading = true);
-    final categoryIndex = _mainCategories.indexOf(_selectedCategory!);
-    final categoryId = (categoryIndex + 1 ).toString();
-    try {
-      // CHANGED: Pass the entire XFile object to the provider
+  try {
+    if (_isUpdateMode) {
+      // --- UPDATE LOGIC ---
+
+      // Create a list of subcategory IDs to send for the update.
+      final List<int> subcategoryIdsToSubmit = _selectedSubcategories.map((e) => e.id).toList();
+
+      await ref.read(sellerShopProvider.notifier).updateShop(
+            shopId: widget.shopToUpdate!.id,
+            shopName: _nameController.text,
+            description: _descriptionController.text,
+            newImageFile: _pickedImage,
+            openingTime: _openingTime,
+            closingTime: _closingTime,
+            categoryId: _selectedMainCategory!.id, // CORRECTED: Pass the integer ID
+            subcategoryIds: subcategoryIdsToSubmit, // CORRECTED: Pass the list of integer IDs
+          );
+    } else {
+      // --- CREATE LOGIC ---
+
+      // For creation, the RPC is smart enough to look up names.
+      final List<String> subcategoryNamesToSubmit = _selectedSubcategories.map((e) => e.name).toList();
+
       await ref.read(sellerShopProvider.notifier).addShop(
             shopName: _nameController.text,
             description: _descriptionController.text,
-            imageFile: _pickedImage!, 
+            imageFile: _pickedImage!,
             openingTime: _openingTime,
             closingTime: _closingTime,
-            categoryName: _selectedCategory!,
-            subcategoryNames: _customCategories,
+            categoryName: _selectedMainCategory!.name, // CORRECTED: Pass the string name
+            subcategoryNames: subcategoryNamesToSubmit, // This remains a list of names for 'create'
           );
+    }
+    
+    final state = ref.read(sellerShopProvider);
+    if (state.hasError) {
+      throw state.error!;
+    }
 
-      final state = ref.read(sellerShopProvider);
-      if (state.hasError) {
-        throw state.error!;
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Shop created successfully! Waiting for admin approval.'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to create shop: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_isUpdateMode ? 'Shop updated successfully!' : 'Shop created successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.pop(context);
+    }
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to ${_isUpdateMode ? 'update' : 'create'} shop: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  } finally {
+    if (mounted) {
+      setState(() => _isLoading = false);
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {
-    final timeFormatter = DateFormat('h:mm a');
-    final openingTimeText = timeFormatter.format(DateTime(2025, 1, 1, _openingTime.hour, _openingTime.minute));
-    final closingTimeText = timeFormatter.format(DateTime(2025, 1, 1, _closingTime.hour, _closingTime.minute));
+    // Watch the main categories provider at the top of the build method.
+    final categoriesAsyncValue = ref.watch(categoriesProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create New Shop'),
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
+        title: Text(_isUpdateMode ? 'Update Shop' : 'Create New Shop'),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: Column(
@@ -167,57 +239,136 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
               const SizedBox(height: 24),
               _buildFormField(
                 controller: _nameController,
-                label: 'Shop Name',
-                hintText: 'Enter your shop name',
-                validator: (value) => value == null || value.isEmpty ? 'Please enter a shop name' : null,
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildTimePickerField(
-                      label: 'Opening Time',
-                      timeText: openingTimeText,
-                      onTap: () => _selectTime(context, isOpeningTime: true),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildTimePickerField(
-                      label: 'Closing Time',
-                      timeText: closingTimeText,
-                      onTap: () => _selectTime(context, isOpeningTime: false),
-                    ),
-                  ),
-                ],
+                labelText: 'Shop Name',
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a shop name.';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
               _buildFormField(
                 controller: _descriptionController,
-                label: 'Description (Optional)',
-                hintText: 'Tell us about your shop...',
+                labelText: 'Description',
                 maxLines: 3,
               ),
               const SizedBox(height: 16),
-              _buildCategoryDropdown(),
+              _buildTimePickerField(
+                context,
+                'Opening Time',
+                _openingTime,
+                true,
+              ),
+              const SizedBox(height: 16),
+              _buildTimePickerField(
+                context,
+                'Closing Time',
+                _closingTime,
+                false,
+              ),
               const SizedBox(height: 24),
-              _buildCustomCategoriesSection(),
+
+              // --- MAIN CATEGORY DROPDOWN ---
+              Text('Main Category', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              categoriesAsyncValue.when(
+                data: (categories) {
+                  // Safely set the default for create mode ONLY if it hasn't been set yet.
+                  if (!_isUpdateMode && _selectedMainCategory == null && categories.isNotEmpty) {
+                    // This schedules the state update for after the build is complete.
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) {
+                        setState(() {
+                          _selectedMainCategory = categories.first;
+                        });
+                      }
+                    });
+                  }
+
+                  if (categories.isEmpty) {
+                    return const Text('No categories available. Please add some in the database.');
+                  }
+
+                  return DropdownButtonFormField<categ.Category>(
+                    value: _selectedMainCategory, // No "!" needed, the value can be null.
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      labelText: 'Select Main Category',
+                    ),
+                    items: categories.map((category) {
+                      return DropdownMenuItem<categ.Category>(
+                        value: category,
+                        child: Text(category.name),
+                      );
+                    }).toList(),
+                    onChanged: (categ.Category? newValue) {
+                      setState(() {
+                        _selectedMainCategory = newValue;
+                        _selectedSubcategories = []; // Clear subcategories when main category changes
+                      });
+                    },
+                    validator: (value) => value == null ? 'Please select a main category.' : null,
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, stack) => Text('Error loading categories: $err'),
+              ),
+              const SizedBox(height: 24),
+
+              // --- SUBCATEGORY SELECTION ---
+              Text('Subcategories', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              if (_selectedMainCategory == null)
+                const Text('Please select a main category to see subcategories.')
+              else
+                // If a main category is selected, watch and display the subcategories.
+                ref.watch(subcategoriesProvider(_selectedMainCategory!.id)).when(
+                      data: (subcategories) {
+                        if (subcategories.isEmpty) {
+                          return const Text('No subcategories found for this category.');
+                        }
+                        return Wrap(
+                          spacing: 8.0,
+                          runSpacing: 4.0,
+                          children: subcategories.map((sub) {
+                            final isSelected = _selectedSubcategories.any((s) => s.id == sub.id);
+                            return FilterChip(
+                              label: Text(sub.name),
+                              selected: isSelected,
+                              onSelected: (bool selected) {
+                                setState(() {
+                                  if (selected) {
+                                    _selectedSubcategories.add(sub);
+                                  } else {
+                                    _selectedSubcategories.removeWhere((s) => s.id == sub.id);
+                                  }
+                                });
+                              },
+                            );
+                          }).toList(),
+                        );
+                      },
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (err, stack) => Text('Error loading subcategories: $err'),
+                    ),
               const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _submitForm,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+
+              Center(
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _submitForm,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Text(
+                            _isUpdateMode ? 'Update Shop' : 'Create Shop',
+                            style: const TextStyle(fontSize: 18),
+                          ),
                   ),
-                  child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                          'Create Shop',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                        ),
                 ),
               ),
             ],
@@ -231,108 +382,59 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Shop Image',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-            color: AppTheme.textColor,
-          ),
-        ),
+        Text('Shop Image', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
-        Container(
-          height: 200,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: AppTheme.cardColor,
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (_pickedImage != null)
-                  kIsWeb
-                      ? Image.network(
-                          _pickedImage!.path,
-                          fit: BoxFit.cover,
-                        )
-                      : Image.file(
-                          File(_pickedImage!.path),
-                          fit: BoxFit.cover,
-                        )
-                else
-                  Image.network(
-                    'https://via.placeholder.com/600x400.png?text=Select+Image',
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.error_outline, color: AppTheme.subtleTextColor, size: 48),
-                            SizedBox(height: 8),
-                            Text(
-                              'Could not load image',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: AppTheme.subtleTextColor),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                Positioned(
-                  bottom: 8,
-                  right: 8,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.white, size: 20),
-                      onPressed: _pickImage,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTimePickerField({
-    required String label,
-    required String timeText,
-    required VoidCallback onTap,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: AppTheme.textColor),
-        ),
-        const SizedBox(height: 8),
-        InkWell(
-          onTap: onTap,
+        GestureDetector(
+          onTap: _pickImage,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            height: 200,
+            width: double.infinity,
             decoration: BoxDecoration(
-              color: AppTheme.cardColor,
+              color: Colors.grey[200],
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.transparent),
+              border: Border.all(color: Colors.grey[400]!),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(timeText, style: const TextStyle(fontSize: 16)),
-                const Icon(Icons.access_time, color: AppTheme.textColor),
-              ],
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (_pickedImage != null)
+                    kIsWeb
+                        ? Image.network(_pickedImage!.path, fit: BoxFit.cover)
+                        : Image.file(File(_pickedImage!.path), fit: BoxFit.cover)
+                  else if (_existingImageUrl != null)
+                    Image.network(_existingImageUrl!, fit: BoxFit.cover)
+                  else
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.camera_alt,
+                          size: 50,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Tap to select image',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  if (_pickedImage != null || _existingImageUrl != null)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: CircleAvatar(
+                        backgroundColor: Colors.black54,
+                        child: IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.white),
+                          onPressed: _pickImage,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -342,159 +444,45 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
 
   Widget _buildFormField({
     required TextEditingController controller,
-    required String label,
-    required String hintText,
+    required String labelText,
     String? Function(String?)? validator,
-    int maxLines = 1,
+    int? maxLines = 1,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-            color: AppTheme.textColor,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          validator: validator,
-          maxLines: maxLines,
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: labelText,
+        border: const OutlineInputBorder(),
+      ),
+      maxLines: maxLines,
+      validator: validator,
+    );
+  }
+
+  Widget _buildTimePickerField(
+    BuildContext context,
+    String labelText,
+    TimeOfDay time,
+    bool isOpening,
+  ) {
+    return GestureDetector(
+      onTap: () => _selectTime(context, isOpening),
+      child: AbsorbPointer(
+        child: TextFormField(
           decoration: InputDecoration(
-            hintText: hintText,
-            filled: true,
-            fillColor: AppTheme.cardColor,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
-            ),
+            labelText: labelText,
+            border: const OutlineInputBorder(),
+            suffixIcon: const Icon(Icons.access_time),
           ),
+          controller: TextEditingController(text: time.format(context)),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please select a time.';
+            }
+            return null;
+          },
         ),
-      ],
-    );
-  }
-
-  Widget _buildCategoryDropdown() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Main Category',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-            color: AppTheme.textColor,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: AppTheme.cardColor,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: DropdownButton<String>(
-            value: _selectedCategory,
-            isExpanded: true,
-            underline: const SizedBox(),
-            items: _mainCategories.map((String category) {
-              return DropdownMenuItem<String>(
-                value: category,
-                child: Text(category),
-              );
-            }).toList(),
-            onChanged: (String? newValue) {
-              setState(() {
-                _selectedCategory = newValue!;
-              });
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCustomCategoriesSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Add Custom Categories',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-            color: AppTheme.textColor,
-          ),
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Add your own categories for menu items (e.g., Coffee, Frappe, Biscuits)',
-          style: TextStyle(
-            color: AppTheme.subtleTextColor,
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _customCategoryController,
-                decoration: InputDecoration(
-                  hintText: 'Add a category...',
-                  filled: true,
-                  fillColor: AppTheme.cardColor,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.add, color: Colors.white),
-                onPressed: _addCustomCategory,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        if (_customCategories.isNotEmpty) ...[
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _customCategories.asMap().entries.map((entry) {
-              final index = entry.key;
-              final category = entry.value;
-              return Chip(
-                label: Text(category),
-                deleteIcon: const Icon(Icons.close, size: 16),
-                onDeleted: () => _removeCustomCategory(index),
-                backgroundColor: AppTheme.accentColor.withOpacity(0.2),
-              );
-            }).toList(),
-          ),
-        ],
-      ],
+      ),
     );
   }
 }
-

@@ -1,6 +1,7 @@
 // screens/seller/seller_home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:panot/services/shop_services.dart';
 import '../../providers/seller_shop_provider.dart';
 import '../../providers/food_stall_provider.dart';
 import '../../widgets/seller_navbar.dart';
@@ -741,10 +742,36 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
               ),
           ],
         ),
-        trailing: const Icon(
-          Icons.pending,
-          color: Colors.orange,
-          size: 24,
+        trailing: PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert), // The classic "3 dots" icon
+          onSelected: (String result) {
+            // This function is called when a menu item is selected.
+            switch (result) {
+              case 'edit':
+                // Navigate to the CreateShopScreen and pass the shop data to it.
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CreateShopScreen(shopToUpdate: shop),
+                  ),
+                );
+                break;
+              case 'cancel':
+                confirmAndDeleteShop(context, shop.id);
+                print('Cancel request for ${shop.name}');
+                break;
+            }
+          },
+          itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+            const PopupMenuItem<String>(
+              value: 'edit',
+              child: Text('Edit'),
+            ),
+            const PopupMenuItem<String>(
+              value: 'cancel',
+              child: Text('Cancel Request'),
+            ),
+          ],
         ),
       ),
     );
@@ -789,7 +816,57 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
       ),
     );
   }
+  void confirmAndDeleteShop(BuildContext context, String shopId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Confirm Deletion'),
+          content: const Text('Are you sure you want to permanently delete this shop and all its subcategories? This cannot be undone.'),
+          actions: <Widget>[
+            // 1. CANCEL BUTTON
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(); // Dismiss the dialog
+              },
+            ),
+            
+            // 2. DELETE BUTTON (Calls the function)
+            TextButton(
+              // Use a red color to emphasize the destructive action
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+              onPressed: () async {
+                // Dismiss the dialog first
+                Navigator.of(dialogContext).pop(); 
 
+                try {
+                  // Call the Supabase function
+                  final shopService = ShopService();
+                  await shopService.deleteShop(shopId);
+
+                  // ⭐ SUCCESS FEEDBACK (Example)
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Shop successfully deleted!')),
+                  );
+                  
+                  // Navigate back or update the UI after a successful deletion
+                  // Navigator.of(context).pop(); 
+
+                } catch (e) {
+                  // ⭐ ERROR FEEDBACK (Example)
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Deletion failed: ${e.toString()}')),
+                  );
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
   Widget _buildFloatingActionButton() {
     return FloatingActionButton(
       backgroundColor: AppTheme.primaryColor,

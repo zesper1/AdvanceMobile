@@ -44,24 +44,45 @@ class SellerShop {
   });
 
   // Factory constructor to create a SellerShop from a JSON map
-  factory SellerShop.fromJson(Map<String, dynamic> json) {
-    // Note: The keys here must match the column names from your database/view.
-    // This example assumes we are querying a view that provides all necessary fields.
-    return SellerShop(
-      id: json['id'].toString(), // Convert int from DB to String
-      name: json['name'] as String,
-      imageUrl: json['image_url'] as String?,
-      openingTime: json['opening_time'] as String,
-      closingTime: json['closing_time'] as String,
-      // You'll need a view that joins to get the category name
-      category: json['category_name'] as String? ?? 'N/A', 
-      rating: (json['rating'] as num).toDouble(),
-      description: json['description'] as String?,
-      sellerId: json['seller_id'] as String,
-      status: _parseShopStatus(json['status'] as String),
-      // This assumes custom_categories is a text array in PostgreSQL
-      customCategories: List<String>.from(json['custom_categories'] ?? []),
-      createdAt: DateTime.parse(json['created_at'] as String),
-    );
-  }
+  // In models/seller_shop_model.dart
+
+factory SellerShop.fromJson(Map<String, dynamic> json) {
+  return SellerShop(
+    // Safely convert id to string, providing a fallback if it's null.
+    id: json['id']?.toString() ?? '',
+
+    // Use `as String?` and provide a default value with `??`.
+    name: json['name'] as String? ?? 'Unnamed Shop',
+
+    // This was already safe since imageUrl is nullable.
+    imageUrl: json['image_url'] as String?,
+
+    // Provide defaults for time strings.
+    openingTime: json['opening_time'] as String? ?? '00:00:00',
+    closingTime: json['closing_time'] as String? ?? '00:00:00',
+    
+    // Corrected key to 'category' and kept the null-safe logic.
+    category: json['category'] as String? ?? 'N/A', 
+
+    // Safely handle numbers that could be int or double.
+    rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
+    
+    // This was already safe since description is nullable.
+    description: json['description'] as String?,
+    
+    // sellerId is required, so a fallback prevents crashes but indicates a data issue.
+    sellerId: json['seller_id'] as String? ?? 'UNKNOWN_SELLER',
+    
+    // Safely parse the status, defaulting to 'pending'.
+    status: _parseShopStatus(json['status'] as String? ?? 'pending'),
+    
+    // This was already safe.
+    customCategories: List<String>.from(json['custom_categories'] ?? []),
+    
+    // Safely parse DateTime, defaulting to the current time if null.
+    createdAt: json['created_at'] == null
+        ? DateTime.now()
+        : DateTime.parse(json['created_at'] as String),
+  );
+}
 }

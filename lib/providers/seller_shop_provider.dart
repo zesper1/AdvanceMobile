@@ -16,11 +16,10 @@ class SellerShopNotifier extends AutoDisposeAsyncNotifier<List<SellerShop>> {
     return ref.read(shopServiceProvider).getSellerShops();
   }
 
-  // This method now accepts an XFile object instead of a String path.
   Future<void> addShop({
     required String shopName,
     required String description,
-    required XFile imageFile, // CHANGED: from imagePath to XFile
+    required XFile imageFile,
     required TimeOfDay openingTime,
     required TimeOfDay closingTime,
     required String categoryName,
@@ -32,7 +31,7 @@ class SellerShopNotifier extends AutoDisposeAsyncNotifier<List<SellerShop>> {
       await ref.read(shopServiceProvider).createShop(
             shopName: shopName,
             description: description,
-            imageFile: imageFile, // Pass the XFile object to the service
+            imageFile: imageFile,
             openingTime: openingTime,
             closingTime: closingTime,
             categoryName: categoryName,
@@ -42,7 +41,35 @@ class SellerShopNotifier extends AutoDisposeAsyncNotifier<List<SellerShop>> {
       return ref.read(shopServiceProvider).getSellerShops();
     });
   }
-}
+
+  Future<void> updateShop({
+    required String shopId,
+    required String shopName,
+    required String description,
+    XFile? newImageFile, // Make the new image optional
+    required TimeOfDay openingTime,
+    required TimeOfDay closingTime,
+    required int categoryId,
+    required List<int> subcategoryIds,
+  }) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      // Call a new service method to handle the update logic
+      await ref.read(shopServiceProvider).updateShop(
+            shopId: shopId,
+            shopName: shopName,
+            description: description,
+            newImageFile: newImageFile,
+            openingTime: openingTime,
+            closingTime: closingTime,
+            categoryId: categoryId,
+            subcategoryIds: subcategoryIds,
+          );
+      // After updating, refetch the full list to update the UI.
+      return ref.read(shopServiceProvider).getSellerShops();
+    });
+  }
+} // This brace correctly closes the SellerShopNotifier class.
 
 // The main provider for accessing the notifier and its state
 final sellerShopProvider =
@@ -70,3 +97,4 @@ final sellerPendingShopsProvider = Provider.autoDispose<AsyncValue<List<SellerSh
   );
 });
 
+// The extra closing brace that caused the error has been removed from here.
