@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart'; // Import for kIsWeb
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart'; // Import for image picker
@@ -19,18 +20,20 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _customCategoryController = TextEditingController();
 
-  // State for the picked image file
   XFile? _pickedImage;
-
-  // State for time pickers
   TimeOfDay _openingTime = const TimeOfDay(hour: 9, minute: 0);
   TimeOfDay _closingTime = const TimeOfDay(hour: 22, minute: 0);
-
-  String _selectedCategory = 'Snack';
+  String? _selectedCategory;
   List<String> _customCategories = [];
   bool _isLoading = false;
 
-  final List<String> _mainCategories = ['Snack', 'Drink', 'Meal', 'Food'];
+  final List<String> _mainCategories = ['Beverages', 'Pastry'];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedCategory = _mainCategories.first;
+  }
 
   @override
   void dispose() {
@@ -40,13 +43,9 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
     super.dispose();
   }
 
-  // --- IMAGE PICKER LOGIC ---
   Future<void> _pickImage() async {
     final imagePicker = ImagePicker();
-    // Allow the user to pick an image from their gallery
     final pickedFile = await imagePicker.pickImage(source: ImageSource.gallery);
-
-    // If a file was picked, update the state to rebuild the UI
     if (pickedFile != null) {
       setState(() {
         _pickedImage = pickedFile;
@@ -87,12 +86,9 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
   }
 
   Future<void> _submitForm() async {
-    // First, validate the form fields
     if (!_formKey.currentState!.validate()) {
       return;
     }
-
-    // Then, validate that an image has been picked
     if (_pickedImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -104,18 +100,24 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
     }
 
     setState(() => _isLoading = true);
-
+    final categoryIndex = _mainCategories.indexOf(_selectedCategory!);
+    final categoryId = (categoryIndex + 1 ).toString();
     try {
-      // Call the provider's method with the image path
+      // CHANGED: Pass the entire XFile object to the provider
       await ref.read(sellerShopProvider.notifier).addShop(
             shopName: _nameController.text,
             description: _descriptionController.text,
-            logoUrl: _pickedImage!.path, // Pass the local file path
+            imageFile: _pickedImage!, 
             openingTime: _openingTime,
             closingTime: _closingTime,
-            categoryName: _selectedCategory,
+            categoryName: _selectedCategory!,
             subcategoryNames: _customCategories,
           );
+
+      final state = ref.read(sellerShopProvider);
+      if (state.hasError) {
+        throw state.error!;
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -245,23 +247,42 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
             borderRadius: BorderRadius.circular(12),
             color: AppTheme.cardColor,
           ),
-          // Use ClipRRect to apply border radius to the image
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Stack(
               fit: StackFit.expand,
               children: [
-                // Conditionally display the picked image or a placeholder
-                _pickedImage != null
-                    ? Image.file(
-                        File(_pickedImage!.path),
-                        fit: BoxFit.cover,
-                      )
-                    : Image.network(
-                        'https://placehold.co/600x400/EEE/000?text=Select+Image',
-                        fit: BoxFit.cover,
-                      ),
-                // Edit button
+                if (_pickedImage != null)
+                  kIsWeb
+                      ? Image.network(
+                          _pickedImage!.path,
+                          fit: BoxFit.cover,
+                        )
+                      : Image.file(
+                          File(_pickedImage!.path),
+                          fit: BoxFit.cover,
+                        )
+                else
+                  Image.network(
+                    'https://via.placeholder.com/600x400.png?text=Select+Image',
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.error_outline, color: AppTheme.subtleTextColor, size: 48),
+                            SizedBox(height: 8),
+                            Text(
+                              'Could not load image',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: AppTheme.subtleTextColor),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                 Positioned(
                   bottom: 8,
                   right: 8,
@@ -272,7 +293,6 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
                     ),
                     child: IconButton(
                       icon: const Icon(Icons.edit, color: Colors.white, size: 20),
-                      // The button now calls the image picker
                       onPressed: _pickImage,
                     ),
                   ),
@@ -284,7 +304,7 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
       ],
     );
   }
-  // Refactored widget for time picker fields
+
   Widget _buildTimePickerField({
     required String label,
     required String timeText,
@@ -319,6 +339,7 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
       ],
     );
   }
+
   Widget _buildFormField({
     required TextEditingController controller,
     required String label,
@@ -476,3 +497,4 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
     );
   }
 }
+

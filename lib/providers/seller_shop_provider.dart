@@ -1,55 +1,47 @@
-// providers/seller_shop_provider.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:panot/services/shop_services.dart';
-
-import '../models/seller_shop_model.dart'; // Adjust path
+import '../models/seller_shop_model.dart';
 
 // Provider for the ShopService dependency
 final shopServiceProvider = Provider<ShopService>((ref) => ShopService());
 
 // The main notifier to manage the seller's shops state
 class SellerShopNotifier extends AutoDisposeAsyncNotifier<List<SellerShop>> {
-  
-  // The build method is called when the provider is first initialized.
-  // It fetches the initial list of shops.
   @override
   Future<List<SellerShop>> build() async {
+    // This method is called when the provider is first read.
+    // It fetches the initial list of shops for the current seller.
     return ref.read(shopServiceProvider).getSellerShops();
   }
 
-  // Add a new shop by calling the service, then refetch the list.
+  // This method now accepts an XFile object instead of a String path.
   Future<void> addShop({
     required String shopName,
     required String description,
-    required String logoUrl,
+    required XFile imageFile, // CHANGED: from imagePath to XFile
     required TimeOfDay openingTime,
     required TimeOfDay closingTime,
     required String categoryName,
     required List<String> subcategoryNames,
   }) async {
-    // Set state to loading to show a loading indicator in the UI
     state = const AsyncValue.loading();
-    
-    // Perform the async operation and update the state with the result
+    // Use AsyncValue.guard to handle potential errors from the service.
     state = await AsyncValue.guard(() async {
       await ref.read(shopServiceProvider).createShop(
             shopName: shopName,
             description: description,
-            imagePath: logoUrl,
+            imageFile: imageFile, // Pass the XFile object to the service
             openingTime: openingTime,
             closingTime: closingTime,
             categoryName: categoryName,
             subcategoryNames: subcategoryNames,
           );
-      // After adding, refetch the full list to get the updated data
+      // After successfully adding, refetch the full list to update the UI.
       return ref.read(shopServiceProvider).getSellerShops();
     });
   }
-
-  // In a real app, update and delete would also be async methods
-  // that call your service and then refetch the state.
 }
 
 // The main provider for accessing the notifier and its state
@@ -62,7 +54,6 @@ final sellerShopProvider =
 final allSellerShopsProvider = Provider.autoDispose<AsyncValue<List<SellerShop>>>((ref) {
   return ref.watch(sellerShopProvider);
 });
-
 
 // A provider to get only the approved shops for the current seller
 final sellerApprovedShopsProvider = Provider.autoDispose<AsyncValue<List<SellerShop>>>((ref) {
@@ -78,3 +69,4 @@ final sellerPendingShopsProvider = Provider.autoDispose<AsyncValue<List<SellerSh
     (shops) => shops.where((shop) => shop.status == ShopStatus.Pending).toList(),
   );
 });
+
