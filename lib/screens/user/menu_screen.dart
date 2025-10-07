@@ -98,38 +98,6 @@ class _StallMenuScreenState extends ConsumerState<StallMenuScreen> {
                   ),
                 ),
 
-                // Seller Access Button
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.store, color: Colors.white),
-                      label: const Text(
-                        'Seller Access',
-                        style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                SellerMainScreen(stall: widget.stall),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-
                 // Search Bar
                 Padding(
                   padding: const EdgeInsets.symmetric(
