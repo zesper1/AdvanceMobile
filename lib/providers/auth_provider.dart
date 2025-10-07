@@ -53,25 +53,17 @@ class AuthNotifier extends _$AuthNotifier {
     );
   }
 
-  // ... (signIn, signUp, and signOut methods remain the same) ...
+  // In lib/providers/auth_provider.dart
   Future<void> signUp({
     required String email,
     required String password,
-    required String firstName,
-    required String lastName,
-    required String role,
+    required Map<String, dynamic> metadata,
   }) async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
-      await ref.read(authServiceProvider).signUp(
-            email: email,
-            password: password,
-            firstName: firstName,
-            lastName: lastName,
-            role: role.toLowerCase().replaceAll(' ', '_'), // e.g., "Shop Admin" -> "shop_admin"
-          );
-      return null;
-    });
+    await ref.read(authServiceProvider).signUp(
+      email: email,
+      password: password,
+      metadata: metadata,
+    );
   }
 
   Future<void> signIn({

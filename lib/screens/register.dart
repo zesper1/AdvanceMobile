@@ -70,45 +70,54 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       return;
     }
 
-    await ref.read(authNotifierProvider.notifier).signUp(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-          firstName: _firstNameController.text.trim(),
-          lastName: _lastNameController.text.trim(),
-          role: _selectedRole!,
-        );
+      // All data, including role-specific data, is gathered here
+      final String email = _emailController.text.trim();
+      final String password = _passwordController.text.trim();
+      final String firstName = _firstNameController.text.trim();
+      final String lastName = _lastNameController.text.trim();
+      final String role = _selectedRole!.toLowerCase().replaceAll(' ', '_');
 
-    if (ref.read(authNotifierProvider).hasError && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(ref.read(authNotifierProvider).error.toString()), backgroundColor: Colors.red),
+  // Prepare metadata for the user
+  Map<String, dynamic> userMetadata = {
+    'first_name': firstName,
+    'last_name': lastName,
+    'role': role,
+  };
+
+  // If the user is a student, add their specific details to the metadata
+  if (role == 'Student') {
+    userMetadata.addAll({
+      'student_id': _studentIdController.text.trim(),
+      'course': _selectedCourse!,
+      'year_level': _parseYearLevel(_selectedYearLevel!),
+    });
+  }
+
+  try {
+      // Call the notifier's signUp method once with all the data
+      await ref.read(authNotifierProvider.notifier).signUp(
+        email: email,
+        password: password,
+        metadata: userMetadata,
       );
-      return;
-    }
-
-    if (_selectedRole == 'Student' && mounted) {
-      try {
-        // MODIFIED: Use the selected dropdown values and parse the year level
-        await ref.read(authNotifierProvider.notifier).createStudentProfile(
-              studentId: _studentIdController.text.trim(),
-              course: _selectedCourse!,
-              yearLevel: _parseYearLevel(_selectedYearLevel!),
-            );
-      } catch (e) {
+      
+      // Show success message and navigate
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Account created, but failed to save student details: ${e.toString()}"), backgroundColor: Colors.red),
+          const SnackBar(
+            content: Text('Registration successful! Please check your email to verify your account.'),
+            backgroundColor: Colors.green,
+          ),
         );
-        return;
+        Navigator.pop(context);
       }
-    }
-    
-    if (mounted) {
-       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Registration successful! Please check your email to verify your account.'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      Navigator.pop(context);
+    } catch (e) {
+      print(e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 

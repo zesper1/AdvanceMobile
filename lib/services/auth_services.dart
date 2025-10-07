@@ -30,21 +30,17 @@ class AuthService {
     });
   }
 
+  // In lib/services/auth_services.dart
   Future<void> signUp({
     required String email,
     required String password,
-    required String firstName,
-    required String lastName,
-    required String role,
+    required Map<String, dynamic> metadata, // Use a single metadata map
   }) async {
     await _supabase.auth.signUp(
       email: email,
       password: password,
-      data: {
-        'first_name': firstName,
-        'last_name': lastName,
-        'role': role,
-      },
+      data: metadata, // Pass the map to the 'data' parameter
+      emailRedirectTo: 'com.example.panot://login-callback', // Make sure this is still here
     );
   }
 
