@@ -4,13 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/seller_shop_model.dart';
 import 'notification_provider.dart';
 import '../models/notification_model.dart';
+import '../models/menu_model.dart';
+import 'menu_provider.dart';
 
 class SellerShopNotifier extends StateNotifier<List<SellerShop>> {
   SellerShopNotifier()
       : super([
           SellerShop(
-            id: 'shop1',
-            sellerId: 'seller_one',
+            id: '1',
+            sellerId: 'demo_seller_001',
+
             name: 'Crispy Corner',
             category: 'Snack',
             description: 'Delicious and crispy snacks for everyone.',
@@ -21,6 +24,11 @@ class SellerShopNotifier extends StateNotifier<List<SellerShop>> {
             status: ShopStatus.Approved,
             rating: 4.5,
             createdAt: DateTime.now().subtract(const Duration(days: 30)),
+            customCategories: [
+              'Fried Food',
+              'Quick Snacks',
+              'Student Favorites'
+            ], // Added
           ),
           SellerShop(
             id: 'shop2',
@@ -35,6 +43,11 @@ class SellerShopNotifier extends StateNotifier<List<SellerShop>> {
             status: ShopStatus.Approved,
             rating: 4.8,
             createdAt: DateTime.now().subtract(const Duration(days: 60)),
+            customCategories: [
+              'Healthy Options',
+              'Fresh Juice',
+              'Smoothies'
+            ], // Added
           ),
           SellerShop(
             id: 'shop3',
@@ -49,6 +62,11 @@ class SellerShopNotifier extends StateNotifier<List<SellerShop>> {
             status: ShopStatus.Pending,
             rating: 4.2,
             createdAt: DateTime.now().subtract(const Duration(days: 5)),
+            customCategories: [
+              'Home Style',
+              'Comfort Food',
+              'Budget Meals'
+            ], // Added
           ),
           SellerShop(
             id: 'shop4',
@@ -63,6 +81,7 @@ class SellerShopNotifier extends StateNotifier<List<SellerShop>> {
             status: ShopStatus.Approved,
             rating: 3.8,
             createdAt: DateTime.now().subtract(const Duration(days: 90)),
+            customCategories: ['Fast Food', 'On-the-Go', 'Late Night'], // Added
           ),
           SellerShop(
             id: 'shop5',
@@ -77,6 +96,7 @@ class SellerShopNotifier extends StateNotifier<List<SellerShop>> {
             status: ShopStatus.Approved,
             rating: 4.9,
             createdAt: DateTime.now().subtract(const Duration(days: 120)),
+            customCategories: ['Seafood', 'Healthy', 'Premium'], // Added
           ),
           SellerShop(
             id: 'shop6',
@@ -91,8 +111,27 @@ class SellerShopNotifier extends StateNotifier<List<SellerShop>> {
             status: ShopStatus.Pending,
             rating: 4.1,
             createdAt: DateTime.now().subtract(const Duration(days: 1)),
+            customCategories: [
+              'Bubble Tea',
+              'Dessert Drinks',
+              'Asian Beverages'
+            ], // Added
           ),
         ]);
+
+  final menuItemsBySellerProvider =
+      Provider.family<List<MenuItem>, String>((ref, sellerId) {
+    final allMenuItems = ref.watch(menuProvider);
+    final allShops = ref.watch(sellerShopProvider);
+    final sellerShopIds = allShops
+        .where((shop) => shop.sellerId == sellerId)
+        .map((shop) => shop.id)
+        .toList();
+
+    return allMenuItems
+        .where((item) => sellerShopIds.contains(item.stallId))
+        .toList();
+  });
 
   // Adds a new shop to the state.
   void addShop(SellerShop shop) {

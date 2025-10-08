@@ -5,7 +5,6 @@ import '../models/food_stall_model.dart';
 class FoodStallNotifier extends StateNotifier<List<FoodStall>> {
   FoodStallNotifier() : super(_dummyData);
 
-  // Toggles the favorite status of a specific food stall.
   void toggleFavorite(String stallId) {
     state = [
       for (final stall in state)
@@ -19,11 +18,12 @@ class FoodStallNotifier extends StateNotifier<List<FoodStall>> {
             closingTime: stall.closingTime,
             category: stall.category,
             rating: stall.rating,
-            // preserve other optional attributes when toggling favorite
             description: stall.description,
             location: stall.location,
             isOpen: stall.isOpen,
             isFavorite: !stall.isFavorite,
+            customCategories:
+                stall.customCategories, // Preserve custom categories
           )
         else
           stall,
@@ -91,6 +91,11 @@ final List<FoodStall> _dummyData = [
     closingTime: '10:00 PM',
     category: 'Snack',
     rating: 4.5,
+    customCategories: [
+      'Fried Food',
+      'Quick Snacks',
+      'Student Favorites'
+    ], // Added custom categories
   ),
   FoodStall(
     id: '2',
@@ -102,6 +107,11 @@ final List<FoodStall> _dummyData = [
     category: 'Drinks',
     rating: 4.8,
     isFavorite: true,
+    customCategories: [
+      'Healthy Options',
+      'Fresh Juice',
+      'Smoothies'
+    ], // Added custom categories
   ),
   FoodStall(
     id: '3',
@@ -112,6 +122,11 @@ final List<FoodStall> _dummyData = [
     closingTime: '09:00 PM',
     category: 'Meal',
     rating: 4.2,
+    customCategories: [
+      'Home Style',
+      'Comfort Food',
+      'Budget Meals'
+    ], // Added custom categories
   ),
   FoodStall(
     id: '4',
@@ -122,6 +137,11 @@ final List<FoodStall> _dummyData = [
     closingTime: '11:00 PM',
     category: 'Snack',
     rating: 3.8,
+    customCategories: [
+      'Fast Food',
+      'On-the-Go',
+      'Late Night'
+    ], // Added custom categories
   ),
   FoodStall(
     id: '5',
@@ -133,6 +153,11 @@ final List<FoodStall> _dummyData = [
     category: 'Meal',
     rating: 4.9,
     isFavorite: true,
+    customCategories: [
+      'Seafood',
+      'Healthy',
+      'Premium'
+    ], // Added custom categories
   ),
   FoodStall(
     id: '6',
@@ -143,5 +168,10 @@ final List<FoodStall> _dummyData = [
     closingTime: '10:00 PM',
     category: 'Drinks',
     rating: 4.1,
+    customCategories: [
+      'Bubble Tea',
+      'Dessert Drinks',
+      'Asian Beverages'
+    ], // Added custom categories
   ),
 ];

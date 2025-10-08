@@ -14,6 +14,7 @@ class FoodStall {
   final String description;
   final String location;
   final bool isOpen;
+  final List<String> customCategories;
 
   FoodStall({
     required this.id,
@@ -28,5 +29,6 @@ class FoodStall {
     this.description = '',
     this.location = '',
     this.isOpen = false,
+    this.customCategories = const [],
   });
 }

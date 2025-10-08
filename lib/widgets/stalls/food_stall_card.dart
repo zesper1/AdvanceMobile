@@ -8,9 +8,14 @@ import '../../screens/user/menu_screen.dart';
 class FoodStallCard extends ConsumerWidget {
   final FoodStall stall;
   final String cardType; // 'horizontal' or 'vertical'
+  final bool showFavoriteButton;
 
-  const FoodStallCard(
-      {super.key, required this.stall, this.cardType = 'horizontal'});
+  const FoodStallCard({
+    super.key,
+    required this.stall,
+    this.cardType = 'horizontal',
+    this.showFavoriteButton = true,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -162,11 +167,12 @@ class FoodStallCard extends ConsumerWidget {
                 left: 8,
                 child: _AvailabilityLabel(status: stall.availability),
               ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: _buildFavoriteButton(context, ref),
-              ),
+              if (showFavoriteButton)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: _buildFavoriteButton(context, ref),
+                ),
             ],
           ),
           // Details section
@@ -279,7 +285,7 @@ class FoodStallCard extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              _buildFavoriteButton(context, ref),
+              if (showFavoriteButton) _buildFavoriteButton(context, ref),
             ],
           ),
           const SizedBox(height: 4),
@@ -301,10 +307,24 @@ class FoodStallCard extends ConsumerWidget {
       onTap: () async {
         await _showFavoriteSuccessDialog(context, ref);
       },
-      child: Icon(
-        stall.isFavorite ? Icons.favorite : Icons.favorite_border,
-        color: stall.isFavorite ? Colors.redAccent : AppTheme.subtleTextColor,
-        size: 20,
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Icon(
+          stall.isFavorite ? Icons.favorite : Icons.favorite_border,
+          color: stall.isFavorite ? Colors.redAccent : AppTheme.subtleTextColor,
+          size: 16,
+        ),
       ),
     );
   }

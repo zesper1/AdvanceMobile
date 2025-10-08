@@ -5,6 +5,7 @@ import '../../providers/food_stall_provider.dart';
 import '../../widgets/stalls/food_stall_card.dart';
 // navbar removed per request; no bottom navigation here
 import '../../theme/app_theme.dart';
+import 'favorites.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -40,7 +41,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ? allStalls
         : ref.watch(stallsByCategoryProvider(_selectedCategory));
 
-    final categories = allStalls.map((stall) => stall.category).toSet().toList();
+    final categories =
+        allStalls.map((stall) => stall.category).toSet().toList();
     categories.insert(0, 'All');
 
     // TODO: Replace this with the actual user's name from your auth/user provider
@@ -50,8 +52,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // --- Welcome Section (smaller) ---
     Widget welcomeSection = Container(
       width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(12, 12, 16, 12), // reduced vertical spacing
-      padding: const EdgeInsets.fromLTRB(8, 12, 16, 12), // reduced padding to make it smaller
+      margin:
+          const EdgeInsets.fromLTRB(12, 12, 16, 12), // reduced vertical spacing
+      padding: const EdgeInsets.fromLTRB(
+          8, 12, 16, 12), // reduced padding to make it smaller
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
@@ -71,7 +75,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           RichText(
             text: TextSpan(
               style: const TextStyle(
-                fontSize: 20,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.textColor,
               ),
@@ -90,7 +94,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Text(
             'Here is your daily Nationalian Canteen menu...',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 12,
               color: AppTheme.textColor.withOpacity(0.93),
               fontWeight: FontWeight.w500,
             ),
@@ -105,14 +109,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         padding: const EdgeInsets.symmetric(vertical: 8.0),
         children: [
           welcomeSection,
-          _buildStallSection('Popular Shops', popularShops, isHorizontal: true, cardType: 'vertical'),
-          _buildStallSection('Favorites', favoriteShops, isHorizontal: true, cardType: 'vertical'),
-          _buildStallSection('Currently Open', openShops, isHorizontal: false, cardType: 'horizontal'),
+          _buildStallSection('Popular Shops', popularShops,
+              isHorizontal: true, cardType: 'vertical'),
+          _buildStallSection('Favorites', favoriteShops,
+              isHorizontal: true, cardType: 'vertical'),
+          _buildStallSection('Currently Open', openShops,
+              isHorizontal: false, cardType: 'horizontal'),
           _buildCategorySection(categories, categoryShops),
           const SizedBox(height: 80),
         ],
       ),
-  // bottom navigation removed as requested
+      // bottom navigation removed as requested
     );
   }
 
@@ -130,7 +137,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: Container(
                 decoration: const BoxDecoration(
                   image: DecorationImage(
-                    image: AssetImage('assets/NU-D.jpg'), // Use your actual background image
+                    image: AssetImage(
+                        'assets/NU-D.jpg'), // Use your actual background image
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -140,7 +148,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             bottom: PreferredSize(
               preferredSize: const Size.fromHeight(80),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0, vertical: 16.0),
                 child: Container(
                   height: 50,
                   decoration: BoxDecoration(
@@ -158,9 +167,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     controller: _searchController,
                     decoration: const InputDecoration(
                       border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       hintText: 'Looking for something?',
-                      prefixIcon: Icon(Icons.search, color: Color.fromARGB(255, 214, 31, 31)),
+                      prefixIcon: Icon(Icons.search,
+                          color: Color.fromARGB(255, 214, 31, 31)),
                     ),
                     onTap: () {
                       if (_searchController.text == 'Looking for something?') {
@@ -201,6 +212,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Favorites circular white button
+                // In the _buildAppBar method of HomeScreen, update the favorites button:
                 Container(
                   margin: const EdgeInsets.only(right: 8),
                   width: 44,
@@ -211,7 +223,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     child: InkWell(
                       customBorder: const CircleBorder(),
                       onTap: () {
-                        // TODO: Navigate to favorites
+                        // Navigate to favorites screen
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const FavoritesScreen(),
+                          ),
+                        );
                       },
                       child: Center(
                         child: Icon(
@@ -251,7 +269,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildStallSection(String title, List<FoodStall> stalls, {required bool isHorizontal, required String cardType}) {
+  Widget _buildStallSection(String title, List<FoodStall> stalls,
+      {required bool isHorizontal, required String cardType}) {
     if (stalls.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -266,26 +285,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: Text(
               title,
               style: const TextStyle(
-                fontSize: 18,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.textColor,
               ),
             ),
           ),
           const SizedBox(height: 12),
-          isHorizontal 
-            ? _buildHorizontalStallList(stalls, cardType: cardType)
-            : _buildVerticalStallList(stalls, cardType: cardType),
+          isHorizontal
+              ? _buildHorizontalStallList(stalls, cardType: cardType)
+              : _buildVerticalStallList(stalls, cardType: cardType),
         ],
       ),
     );
   }
 
- Widget _buildHorizontalStallList(List<FoodStall> stalls, {required String cardType}) {
-final screenWidth = MediaQuery.of(context).size.width;
- final cardWidth = cardType == 'vertical' ? screenWidth * 0.65 : screenWidth * 0.75;
+  Widget _buildHorizontalStallList(List<FoodStall> stalls,
+      {required String cardType}) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth =
+        cardType == 'vertical' ? screenWidth * 0.65 : screenWidth * 0.75;
 // INCREASE THIS VALUE: 200.0 -> 240.0
- final cardHeight = cardType == 'vertical' ? 240.0 : 160.0; // SAFE HEIGHT INCREASED
+    final cardHeight =
+        cardType == 'vertical' ? 240.0 : 160.0; // SAFE HEIGHT INCREASED
 
     return SizedBox(
       height: cardHeight,
@@ -307,22 +329,26 @@ final screenWidth = MediaQuery.of(context).size.width;
     );
   }
 
-  Widget _buildVerticalStallList(List<FoodStall> stalls, {required String cardType}) {
+  Widget _buildVerticalStallList(List<FoodStall> stalls,
+      {required String cardType}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
-        children: stalls.map((stall) => Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: FoodStallCard(
-            stall: stall,
-            cardType: cardType,
-          ),
-        )).toList(),
+        children: stalls
+            .map((stall) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: FoodStallCard(
+                    stall: stall,
+                    cardType: cardType,
+                  ),
+                ))
+            .toList(),
       ),
     );
   }
 
-  Widget _buildCategorySection(List<String> categories, List<FoodStall> stalls) {
+  Widget _buildCategorySection(
+      List<String> categories, List<FoodStall> stalls) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
@@ -335,7 +361,7 @@ final screenWidth = MediaQuery.of(context).size.width;
                 const Text(
                   'By Category',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: AppTheme.textColor,
                   ),
@@ -346,18 +372,20 @@ final screenWidth = MediaQuery.of(context).size.width;
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppTheme.subtleTextColor.withOpacity(0.3)),
+                    border: Border.all(
+                        color: AppTheme.subtleTextColor.withOpacity(0.3)),
                   ),
                   child: DropdownButton<String>(
                     value: _selectedCategory,
                     underline: const SizedBox(),
-                    icon: const Icon(Icons.arrow_drop_down, color: AppTheme.textColor),
+                    icon: const Icon(Icons.arrow_drop_down,
+                        color: AppTheme.textColor),
                     items: categories.map((String category) {
                       return DropdownMenuItem<String>(
                         value: category,
                         child: Text(
                           category,
-                          style: const TextStyle(fontSize: 14),
+                          style: const TextStyle(fontSize: 12),
                         ),
                       );
                     }).toList(),

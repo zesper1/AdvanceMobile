@@ -8,6 +8,7 @@ import '../../widgets/stalls/food_stall_card.dart';
 import '../../theme/app_theme.dart';
 import 'create_shop.dart';
 import 'seller_account.dart';
+import 'seller_shop_management_screen.dart';
 import '../../models/seller_shop_model.dart';
 import '../../models/food_stall_model.dart';
 
@@ -29,7 +30,9 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
   String _selectedCategory = 'All';
   String _selectedStatus = 'All'; // 'All', 'Open', 'Closed'
   int _currentIndex = 0;
-  int _currentTabIndex = 0; // 0: My Shops, 1: Pending, 2: All Shops
+  // int _currentTabIndex = 0; // previously unused: 0: My Shops, 1: Pending, 2: All Shops
+  // NEW STATE: Control the visibility of the welcome banner
+  bool _showWelcomeBanner = true;
 
   @override
   void dispose() {
@@ -130,6 +133,7 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
       case 0:
         return _buildShopsScreen();
       case 1:
+        // Assuming this is supposed to be the account screen as per the original structure
         return SellerAccountScreen(sellerId: widget.sellerId);
       default:
         return _buildShopsScreen();
@@ -142,14 +146,13 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
     final pendingShops = ref.watch(sellerPendingShopsProvider(widget.sellerId));
     final allShops = ref.watch(foodStallProvider);
 
-    // Refresh the providers to ensure they have the latest state
-    // This can be helpful if the underlying state changes.
     ref.watch(sellerShopProvider);
 
     return Column(
       children: [
-        // Welcome Section with Stats
-        _buildWelcomeSection(approvedShops.length, pendingShops.length),
+        // Welcome Section with Stats - ONLY SHOW IF _showWelcomeBanner is true
+        if (_showWelcomeBanner)
+          _buildWelcomeSection(approvedShops.length, pendingShops.length),
 
         // Main Content with Tabs
         Expanded(
@@ -188,9 +191,8 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
                       Tab(text: 'All Shops'),
                     ],
                     onTap: (index) {
-                      setState(() {
-                        _currentTabIndex = index;
-                      });
+                      // Tab change handled by DefaultTabController and TabBarView
+                      setState(() {});
                     },
                   ),
                 ),
@@ -214,7 +216,7 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
     );
   }
 
-  // Smaller Welcome Section with updated stats
+  // MODIFIED: Welcome Section with added Dismiss/Close button
   Widget _buildWelcomeSection(int approvedCount, int pendingCount) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -269,17 +271,27 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.storefront,
-                  color: Colors.white,
-                  size: 22,
+              // NEW: Dismiss Button
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _showWelcomeBanner = false;
+                  });
+                  // Optionally, you can also save this preference locally
+                  // so the banner stays hidden on subsequent app opens.
+                },
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                 ),
               ),
             ],
@@ -306,6 +318,14 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
       ),
     );
   }
+
+  // ... (Keep the rest of your original widgets: _buildWelcomeStatItem,
+  // _buildMyShopsTab, _buildPendingTab, _buildAllShopsTab,
+  // _buildEnhancedFilterSection, _buildStatusToggle, _buildSellerShopCard,
+  // _buildPendingShopCard, _buildEmptyState, _buildFloatingActionButton)
+
+  // Note: I am only including the modified or new parts in the full code block.
+  // In a real file, you would keep all the other methods as they were.
 
   Widget _buildWelcomeStatItem({
     required int count,
@@ -396,6 +416,8 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
     // Apply status filter
     if (_selectedStatus != 'All') {
       filteredShops = filteredShops.where((shop) {
+        // NOTE: The original code assumes shop has an 'availability' property
+        // that matches the AvailabilityStatus enum.
         if (_selectedStatus == 'Open') {
           return shop.availability == AvailabilityStatus.Open;
         } else if (_selectedStatus == 'Closed') {
@@ -408,8 +430,6 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
 
     return Column(
       children: [
-        // REMOVED Search bar
-
         // Enhanced Filter Section
         _buildEnhancedFilterSection(allShops),
         Expanded(
@@ -429,6 +449,8 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
                       child: FoodStallCard(
                         stall: shop,
                         cardType: 'horizontal',
+                        showFavoriteButton:
+                            false, // 👈 Hide favorite icon for sellers
                       ),
                     );
                   },
@@ -663,10 +685,43 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
                 fontSize: 12,
               ),
             ),
+            // NEW: Manage Shop Button
+            Padding(
+              padding: const EdgeInsets.only(top: 6.0),
+              child: SizedBox(
+                height: 30, // Control button height
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            SellerShopManagementScreen(shop: shop),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.settings, size: 16),
+                  label: const Text(
+                    'Manage Shop',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.primaryColor,
+                    side: BorderSide(
+                        color: AppTheme.primaryColor.withOpacity(0.5),
+                        width: 1),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
         trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
             color: Colors.green.withOpacity(0.1),
             borderRadius: BorderRadius.circular(16),
@@ -684,7 +739,7 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
           ),
         ),
         onTap: () {
-          // Add shop details navigation if needed
+          // Add shop details navigation if needed (or keep this for quick access)
         },
       ),
     );
