@@ -1,0 +1,2 @@
+C:/flutterapp/AdvanceMobile/android/app/.cxx/Debug/p6012345/arm64-v8a/CMakeFiles/edit_cache.dir
+C:/flutterapp/AdvanceMobile/android/app/.cxx/Debug/p6012345/arm64-v8a/CMakeFiles/rebuild_cache.dir

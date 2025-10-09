@@ -1,0 +1,1 @@
+C:\flutterapp\AdvanceMobile\build\app\intermediates\cxx\Debug\p6012345\obj\arm64-v8a

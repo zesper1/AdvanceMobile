@@ -57,4 +57,11 @@ class AuthService {
   Future<void> signOut() async {
     await _supabase.auth.signOut();
   }
+    // NEW: Function to handle sending the password reset email
+  Future<void> sendPasswordResetEmail(String email) async {
+    await _supabase.auth.resetPasswordForEmail(
+      email,
+      redirectTo: 'com.example.panot://reset-callback/',
+    );
+  }
 }

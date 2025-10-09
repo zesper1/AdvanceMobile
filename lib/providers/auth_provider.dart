@@ -1,4 +1,3 @@
-// lib/providers/auth_provider.dart
 import 'dart:async';
 import 'package:panot/models/user_model.dart';
 import 'package:panot/services/auth_services.dart';
@@ -7,7 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 part 'auth_provider.g.dart';
 
-// ... (supabaseClientProvider, authServiceProvider, authStateChangeProvider remain the same) ...
+// These providers remain the same
 @riverpod SupabaseClient supabaseClient(SupabaseClientRef ref) => Supabase.instance.client;
 @riverpod AuthService authService(AuthServiceRef ref) => AuthService(ref.watch(supabaseClientProvider));
 @riverpod Stream<AuthState> authStateChange(AuthStateChangeRef ref) => ref.watch(authServiceProvider).onAuthStateChange;
@@ -18,25 +17,37 @@ class AuthNotifier extends _$AuthNotifier {
   @override
   Future<UserProfile?> build() async {
     final authService = ref.watch(authServiceProvider);
-    final authState = await ref.watch(authStateChangeProvider.future);
-    final session = authState.session;
-
-    if (session != null) {
-      try {
-        final profileMap = await authService.fetchUserProfile(session.user.id);
-        if (profileMap != null) {
+    
+    // Listen to the auth state stream to automatically handle login, logout, and password recovery
+    final authStateSubscription = ref.listen(authStateChangeProvider, (_, next) async {
+      final session = next.asData?.value.session;
+      if (session != null) {
+        // User is logged in, fetch their profile
+        state = const AsyncValue.loading();
+        state = await AsyncValue.guard(() async {
+          final profileMap = await authService.fetchUserProfile(session.user.id);
           return UserProfile.fromJson(profileMap);
-        }
-      } catch (e) {
-        print("Error in AuthNotifier build: $e");
-        await authService.signOut();
-        return null;
+        });
+      } else {
+        // User is logged out
+        state = const AsyncValue.data(null);
       }
+    });
+
+    // Clean up the listener when the provider is disposed
+    ref.onDispose(() => authStateSubscription.close());
+
+    // Initial check
+    final initialSession = ref.read(supabaseClientProvider).auth.currentSession;
+    if (initialSession != null) {
+      final profileMap = await authService.fetchUserProfile(initialSession.user.id);
+      return UserProfile.fromJson(profileMap);
     }
+    
     return null;
   }
   
-  // NEW: Expose the createStudentProfile method
+  // createStudentProfile method remains the same
   Future<void> createStudentProfile({
     required String studentId,
     required String course,
@@ -53,7 +64,7 @@ class AuthNotifier extends _$AuthNotifier {
     );
   }
 
-  // In lib/providers/auth_provider.dart
+  // signUp method remains the same
   Future<void> signUp({
     required String email,
     required String password,
@@ -66,23 +77,36 @@ class AuthNotifier extends _$AuthNotifier {
     );
   }
 
+  // CORRECTED signIn method
   Future<void> signIn({
     required String email,
     required String password,
   }) async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
-      await ref.read(authServiceProvider).signIn(
-            email: email,
-            password: password,
-          );
-      return null;
-    });
+    // Just call the service. The `build` method's listener will automatically
+    // handle the state update upon successful login.
+    await ref.read(authServiceProvider).signIn(
+      email: email,
+      password: password,
+    );
   }
 
+  // NEW: Method to send the password reset link
+  Future<void> sendPasswordResetEmail(String email) async {
+    // We don't need to manage state here, just call the service.
+    // The UI will show a confirmation message.
+    await ref.read(authServiceProvider).sendPasswordResetEmail(email);
+  }
+
+  // NEW: Method to update the user's password after they've clicked the link
+  Future<void> updateUserPassword(String newPassword) async {
+    await ref.read(supabaseClientProvider).auth.updateUser(
+      UserAttributes(password: newPassword),
+    );
+  }
+
+  // signOut method remains the same
   Future<void> signOut() async {
-    state = const AsyncValue.loading();
     await ref.read(authServiceProvider).signOut();
-    state = const AsyncValue.data(null);
+    // The listener in `build` will automatically set the state to AsyncData(null)
   }
 }
