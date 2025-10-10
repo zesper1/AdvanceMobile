@@ -1,12 +1,12 @@
 // widgets/admin/admin_all_shops_widget.dart
 import 'package:flutter/material.dart';
+import 'package:panot/models/admin_view_model.dart' as adm;
 import '../../models/food_stall_model.dart';
-import '../../models/seller_shop_model.dart';
 import 'food_stall_card.dart';
 import '../../theme/app_theme.dart';
 
 class AdminAllShopsWidget extends StatefulWidget {
-  final List<SellerShop> allShops;
+  final List<adm.AdminShopView> allShops;
 
   const AdminAllShopsWidget({
     super.key,
@@ -26,19 +26,19 @@ class _AdminAllShopsWidgetState extends State<AdminAllShopsWidget> {
     // Convert SellerShop to FoodStall for the AdminFoodStallCard
     final foodStalls = widget.allShops
         .map((shop) => FoodStall(
-              id: shop.id,
-              name: shop.name,
-              imageUrl: shop.imageUrl!,
-              category: shop.category,
+              id: shop.shopId,
+              name: shop.shopName,
+              imageUrl: shop.logoUrl!,
+              category: shop.categoryName,
               rating: shop.rating,
-              availability: shop.status == ShopStatus.Approved
+              availability: shop.status == adm.ShopStatus.approved
                   ? AvailabilityStatus.Open
                   : AvailabilityStatus.Closed,
-              openingTime: shop.openingTime,
-              closingTime: shop.closingTime,
+              openingTime: shop.openingTime!,
+              closingTime: shop.closingTime!,
               description: shop.description ?? '',
               location: 'NU Dasma Campus',
-              isOpen: shop.status == ShopStatus.Approved,
+              isOpen: shop.status == adm.ShopStatus.approved,
             ))
         .toList();
 

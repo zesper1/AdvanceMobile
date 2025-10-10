@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:panot/models/notification_model.dart';
 import 'package:panot/providers/notification_provider.dart';
+import 'package:panot/services/admin_services.dart';
 import 'package:panot/services/shop_services.dart';
 import '../models/seller_shop_model.dart';
 
 // Provider for the ShopService dependency
 final shopServiceProvider = Provider<ShopService>((ref) => ShopService());
-
-// The main notifier to manage the seller's shops state
+// CORRECTED: The AdminService provider now gets the client and passes it to the service.
 class SellerShopNotifier extends AutoDisposeAsyncNotifier<List<SellerShop>> {
   @override
   Future<List<SellerShop>> build() async {
@@ -28,7 +28,6 @@ class SellerShopNotifier extends AutoDisposeAsyncNotifier<List<SellerShop>> {
     required List<int> subcategoryNames,
   }) async {
     state = const AsyncValue.loading();
-    // Use AsyncValue.guard to handle potential errors from the service.
     state = await AsyncValue.guard(() async {
       await ref.read(shopServiceProvider).createShop(
             shopName: shopName,
@@ -68,20 +67,6 @@ class SellerShopNotifier extends AutoDisposeAsyncNotifier<List<SellerShop>> {
             subcategoryIds: subcategoryIds,
           );
       // After updating, refetch the full list to update the UI.
-      return ref.read(shopServiceProvider).getSellerShops();
-    });
-  }
-
-  /// Updates the status of a specific shop and refetches the list.
-  Future<void> updateShopStatus(String shopId, ShopStatus status) async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
-      // Assumes a method in your service to update the status in the database
-      await ref.read(shopServiceProvider).updateShopStatus(
-            shopId: shopId,
-            status: status,
-          );
-      // After successfully updating, refetch the full list to update the UI.
       return ref.read(shopServiceProvider).getSellerShops();
     });
   }

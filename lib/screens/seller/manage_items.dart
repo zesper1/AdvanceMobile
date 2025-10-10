@@ -18,7 +18,7 @@ class ManageStoreScreen extends ConsumerStatefulWidget {
 class _ManageStoreScreenState extends ConsumerState<ManageStoreScreen> {
   @override
   Widget build(BuildContext context) {
-    final menuItems = ref.watch(menuItemsByStallProvider(widget.stall.id));
+    final menuItems = ref.watch(menuItemsByStallProvider(widget.stall.id.toString()));
 
     return Scaffold(
       appBar: AppBar(
@@ -215,7 +215,7 @@ class _ManageStoreScreenState extends ConsumerState<ManageStoreScreen> {
                   imageUrl: imageUrlController.text,
                   stock: int.tryParse(stockController.text) ?? 0,
                   category: categoryController.text,
-                  stallId: widget.stall.id,
+                  stallId: widget.stall.id.toString(),
                 );
 
                 if (existingItem == null) {

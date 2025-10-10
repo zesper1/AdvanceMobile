@@ -1,6 +1,6 @@
 // widgets/admin/admin_analytics_widget.dart
 import 'package:flutter/material.dart';
-import '../../models/seller_shop_model.dart';
+import 'package:panot/models/admin_view_model.dart';
 import '../../theme/app_theme.dart';
 
 class AdminAnalyticsWidget extends StatelessWidget {
@@ -11,7 +11,7 @@ class AdminAnalyticsWidget extends StatelessWidget {
   final int pendingCount;
   final int approvedCount;
   final int rejectedCount;
-  final List<SellerShop> recentShops;
+  final List<AdminShopView> recentShops;
 
   const AdminAnalyticsWidget({
     super.key,
@@ -330,7 +330,7 @@ class AdminAnalyticsWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildRecentActivityItem(SellerShop shop) {
+  Widget _buildRecentActivityItem(AdminShopView shop) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -343,7 +343,7 @@ class AdminAnalyticsWidget extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Image.network(
-              shop.imageUrl!,
+              shop.logoUrl!,
               width: 40,
               height: 40,
               fit: BoxFit.cover,
@@ -361,7 +361,7 @@ class AdminAnalyticsWidget extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  shop.name,
+                  shop.shopName,
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
@@ -369,7 +369,7 @@ class AdminAnalyticsWidget extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${shop.category} • ${_getStatusText(shop.status)}',
+                  '${shop.categoryName} • ${_getStatusText(shop.status)}',
                   style: TextStyle(
                     fontSize: 12,
                     color: AppTheme.subtleTextColor,
@@ -401,23 +401,27 @@ class AdminAnalyticsWidget extends StatelessWidget {
 
   String _getStatusText(ShopStatus status) {
     switch (status) {
-      case ShopStatus.Pending:
+      case ShopStatus.pending:
         return 'Pending';
-      case ShopStatus.Approved:
+      case ShopStatus.approved:
         return 'Approved';
-      case ShopStatus.Rejected:
+      case ShopStatus.rejected:
         return 'Rejected';
+      default :
+        return 'Unknown';
     }
   }
 
   Color _getStatusColor(ShopStatus status) {
     switch (status) {
-      case ShopStatus.Pending:
+      case ShopStatus.pending:
         return Colors.orange;
-      case ShopStatus.Approved:
+      case ShopStatus.approved:
         return Colors.green;
-      case ShopStatus.Rejected:
+      case ShopStatus.rejected:
         return Colors.red;
+      default:
+        return Colors.grey;
     }
   }
 }

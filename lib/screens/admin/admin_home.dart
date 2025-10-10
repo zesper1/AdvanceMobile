@@ -1,13 +1,12 @@
-// screens/admin/admin_dashboard.dart - SIMPLIFIED
+// screens/admin/admin_dashboard.dart - REFACTORED
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:panot/providers/auth_provider.dart';
 import 'package:panot/screens/login.dart';
-import 'package:panot/services/admin_services.dart';
 import 'package:panot/widgets/logout_dialog.dart';
-import '../../providers/seller_shop_provider.dart';
-import '../../providers/notification_provider.dart';
-import '../../models/seller_shop_model.dart';
+import '../../providers/admin_provider.dart'; // MODIFIED: Use the new admin provider
+import '../../models/admin_view_model.dart';
+import '../../services/admin_services.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/admin/admin_analytics.dart';
 import '../../widgets/admin/admin_shop_request.dart';
@@ -31,7 +30,6 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
     super.dispose();
   }
 
- // --- THIS METHOD IS MODIFIED ---
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       flexibleSpace: Container(
@@ -60,12 +58,11 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
         ),
       ),
       actions: [
-        // Your existing profile button
         Padding(
           padding: const EdgeInsets.only(right: 12.0),
           child: GestureDetector(
             onTap: () {
-              // Add admin profile navigation if needed
+              // TODO: Add admin profile navigation
             },
             child: Container(
               width: 42,
@@ -88,7 +85,6 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
             ),
           ),
         ),
-        // ADDED: Logout button
         IconButton(
           icon: const Icon(Icons.logout, color: Colors.white),
           tooltip: 'Logout',
@@ -115,123 +111,119 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
     );
   }
 
-  void _approveShop(SellerShop shop) {
+  // --- METHODS NOW CORRECTLY USE THE ADMIN NOTIFIER AND MODEL ---
+
+  void _approveShop(AdminShopView shop) {
     ref
-        .read(sellerShopProvider.notifier)
-        .updateShopStatus(shop.id, ShopStatus.Approved);
+        .read(adminNotifierProvider.notifier)
+        .updateShopStatus(shop.shopId.toString(), ShopStatus.approved);
     ref
-        .read(sellerShopProvider.notifier)
-        .sendShopStatusNotification(shop, ShopStatus.Approved);
+        .read(adminNotifierProvider.notifier)
+        .sendShopStatusNotification(shop, ShopStatus.approved);
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${shop.name} has been approved'),
+        content: Text('${shop.shopName} has been approved'),
         backgroundColor: Colors.green,
       ),
     );
   }
 
-  void _rejectShop(SellerShop shop) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reject Shop'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Reject "${shop.name}"?'),
-            const SizedBox(height: 16),
-            const Text('Reason for rejection (optional):'),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _rejectionReasonController,
-              decoration: const InputDecoration(
-                hintText: 'Enter reason...',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              ref
-                  .read(sellerShopProvider.notifier)
-                  .updateShopStatus(shop.id, ShopStatus.Rejected);
-              ref.read(sellerShopProvider.notifier).sendShopStatusNotification(
-                    shop,
-                    ShopStatus.Rejected,
-                    adminNotes: _rejectionReasonController.text.isEmpty
-                        ? null
-                        : _rejectionReasonController.text,
-                  );
-              _rejectionReasonController.clear();
-              Navigator.pop(context);
+// In lib/screens/admin/admin_dashboard.dart
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${shop.name} has been rejected'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            },
-            child: const Text('Reject', style: TextStyle(color: Colors.white)),
+void _rejectShop(AdminShopView shop) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Reject Shop'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Are you sure you want to reject "${shop.shopName}"?'),
+          const SizedBox(height: 16),
+          const Text('Reason for rejection (optional):'),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _rejectionReasonController,
+            decoration: const InputDecoration(
+              hintText: 'Enter reason...',
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 3,
           ),
         ],
       ),
-    );
-  }
+      actions: [
+        // FIX 1: Added the required onPressed callback and a child
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          onPressed: () {
+            ref
+                .read(adminNotifierProvider.notifier)
+                // FIX 2: Changed 'Rejected' to 'rejected'
+                .updateShopStatus(shop.shopId.toString(), ShopStatus.rejected);
+            ref.read(adminNotifierProvider.notifier).sendShopStatusNotification(
+                  shop,
+                  // FIX 2: Changed 'Rejected' to 'rejected'
+                  ShopStatus.rejected,
+                  adminNotes: _rejectionReasonController.text.isEmpty
+                      ? null
+                      : _rejectionReasonController.text,
+                );
+            _rejectionReasonController.clear();
+            Navigator.pop(context);
+
+            // FIX 3: Provided the required SnackBar widget
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('${shop.shopName} has been rejected'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          },
+          child: const Text('Reject', style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
-    // Watch the provider as before. 'allShopsAsync' is an AsyncValue.
-    final allShopsAsync = ref.watch(sellerShopProvider);
+    // MODIFIED: Watch the single source of truth for admin data
+    final allShopsAsync = ref.watch(adminNotifierProvider);
 
-    // Use .when() to handle the different states of the AsyncValue
     return allShopsAsync.when(
-      // --- 1. LOADING STATE ---
       loading: () => Scaffold(
         appBar: _buildAppBar(),
         body: const Center(child: CircularProgressIndicator()),
       ),
-      // --- 2. ERROR STATE ---
       error: (error, stackTrace) => Scaffold(
         appBar: _buildAppBar(),
         body: Center(child: Text('Error fetching shops: $error')),
       ),
-      // --- 3. DATA STATE ---
-      data: (allShopsList) {
-        // The list is now safely unwrapped! 'allShopsList' is a List<SellerShop>.
-        // Now you can perform operations like .where() on it.
-        final pendingShops = allShopsList
-            .where((shop) => shop.status == ShopStatus.Pending)
-            .toList();
-
-        // Build the main UI with the actual data
+      data: (allShopsList) { // This is now correctly a List<AdminShopView>
         return Scaffold(
           appBar: _buildAppBar(),
-          body: _buildCurrentScreen(allShopsList, pendingShops),
+          body: _buildCurrentScreen(allShopsList),
           bottomNavigationBar: _buildBottomNavBar(),
         );
       },
     );
   }
 
-  Widget _buildCurrentScreen(
-      List<SellerShop> allShops, List<SellerShop> pendingShops) {
+  Widget _buildCurrentScreen(List<AdminShopView> allShops) {
     switch (_currentIndex) {
       case 0:
         return _buildAnalyticsScreen(allShops);
       case 1:
+        // MODIFIED: This widget now fetches its own data, so we don't pass anything.
         return AdminShopRequestsWidget(
-          pendingShops: pendingShops,
           onApprove: _approveShop,
           onReject: _rejectShop,
         );
@@ -242,23 +234,14 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
     }
   }
 
-  // --- THIS METHOD IS NOW POWERED BY YOUR RPC ---
-  Widget _buildAnalyticsScreen(List<SellerShop> allShops) {
-    // 1. Watch the new provider that calls your RPC
+  Widget _buildAnalyticsScreen(List<AdminShopView> allShops) {
     final analyticsAsync = ref.watch(dashboardAnalyticsProvider);
-
-    // 2. Use .when() to handle loading/error/data states for the analytics
     return analyticsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (err, stack) => Center(child: Text('Failed to load analytics: $err')),
       data: (analyticsData) {
-        // 3. Once data arrives, extract it from the map
         final statusDistribution = analyticsData['status_distribution'];
-        
-        // This data for recent shops still comes from the allShops list
         final recentShops = allShops.take(5).toList();
-
-        // 4. Pass the data fetched from the RPC to your UI widget
         return AdminAnalyticsWidget(
           totalShops: analyticsData['total_shops'],
           activeShops: analyticsData['active_shops'],
@@ -267,7 +250,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
           pendingCount: statusDistribution['pending']['count'],
           approvedCount: statusDistribution['approved']['count'],
           rejectedCount: statusDistribution['rejected']['count'],
-          recentShops: recentShops,
+          recentShops: recentShops, // You will need to update AdminAnalyticsWidget to accept List<AdminShopView>
         );
       },
     );

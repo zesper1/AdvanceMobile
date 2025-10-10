@@ -239,27 +239,5 @@ class ShopService {
       throw Exception('Failed to delete shop: $error');
     }
   }
-  Future<void> updateShopStatus({
-    required String shopId,
-    required ShopStatus status,
-  }) async {
-    try {
-      // The database 'shop_status' enum uses lowercase values ('pending', 'approved').
-      // We convert the Dart enum's name to the required format.
-      final statusString = status.name.toLowerCase();
-
-      await _supabase
-          .from('shops')
-          .update({'status': statusString})
-          .eq('shop_id', int.parse(shopId)); // The primary key is 'shop_id'
-
-    } on PostgrestException catch (e) {
-      print('Database Error updating shop status: ${e.message}');
-      rethrow;
-    } catch (e) {
-      print('An unexpected error occurred while updating shop status: $e');
-      rethrow;
-    }
-  }
 }
 

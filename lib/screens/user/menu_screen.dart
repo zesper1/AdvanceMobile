@@ -38,7 +38,7 @@ class _StallMenuScreenState extends ConsumerState<StallMenuScreen> {
     final isCurrentlyFavorite = _isFavorite;
 
     // Toggle favorite status
-    ref.read(foodStallProvider.notifier).toggleFavorite(widget.stall.id);
+    ref.read(foodStallProvider.notifier).toggleFavorite(widget.stall.id.toString());
     setState(() {
       _isFavorite = !_isFavorite;
     });
@@ -107,7 +107,7 @@ class _StallMenuScreenState extends ConsumerState<StallMenuScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final menuItems = ref.watch(menuItemsByStallProvider(widget.stall.id));
+    final menuItems = ref.watch(menuItemsByStallProvider(widget.stall.id.toString()));
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -241,7 +241,7 @@ class _StallMenuScreenState extends ConsumerState<StallMenuScreen> {
                         }
                       },
                       onChanged: (value) {
-                        ref.read(menuProvider.notifier).searchMenuItems(value, widget.stall.id);
+                        ref.read(menuProvider.notifier).searchMenuItems(value, widget.stall.id.toString());
                       },
                     ),
                   ),
