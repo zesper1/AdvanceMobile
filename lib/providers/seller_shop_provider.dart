@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:panot/models/notification_model.dart';
+import 'package:panot/providers/notification_provider.dart';
 import 'package:panot/services/shop_services.dart';
 import '../models/seller_shop_model.dart';
 
@@ -68,6 +70,45 @@ class SellerShopNotifier extends AutoDisposeAsyncNotifier<List<SellerShop>> {
       // After updating, refetch the full list to update the UI.
       return ref.read(shopServiceProvider).getSellerShops();
     });
+  }
+
+  /// Updates the status of a specific shop and refetches the list.
+  Future<void> updateShopStatus(String shopId, ShopStatus status) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      // Assumes a method in your service to update the status in the database
+      await ref.read(shopServiceProvider).updateShopStatus(
+            shopId: shopId,
+            status: status,
+          );
+      // After successfully updating, refetch the full list to update the UI.
+      return ref.read(shopServiceProvider).getSellerShops();
+    });
+  }
+  /// This is business logic that lives alongside the state management.
+  void sendShopStatusNotification(
+    SellerShop shop,
+    ShopStatus status, {
+    String? adminNotes,
+  }) {
+    // This uses the built-in `ref` from the Notifier, no need to pass it in.
+    final notificationNotifier = ref.read(notificationProvider.notifier);
+
+    final notification = SellerNotification(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      sellerId: shop.sellerId,
+      shopId: shop.id,
+      shopName: shop.name,
+      type: status == ShopStatus.Approved
+          ? NotificationType.shopApproved
+          : NotificationType.shopRejected,
+      message: status == ShopStatus.Approved
+          ? 'Your shop "${shop.name}" has been approved and is now live!'
+          : 'Your shop "${shop.name}" was rejected.${adminNotes != null ? ' Reason: $adminNotes' : ''}',
+      createdAt: DateTime.now(),
+    );
+
+    notificationNotifier.addNotification(notification);
   }
 } // This brace correctly closes the SellerShopNotifier class.
 

@@ -1,130 +1,28 @@
+// widgets/admin/admin_food_stall_card.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/food_stall_model.dart';
-import '../../providers/food_stall_provider.dart';
 import '../../theme/app_theme.dart';
-import '../../screens/user/menu_screen.dart';
 
-class FoodStallCard extends ConsumerWidget {
+class AdminFoodStallCard extends StatelessWidget {
   final FoodStall stall;
-  final String cardType; // 'horizontal' or 'vertical'
-  final bool showFavoriteButton;
+  final String cardType; // 'horizontal' or 'grid'
 
-  const FoodStallCard({
+  const AdminFoodStallCard({
     super.key,
     required this.stall,
     this.cardType = 'horizontal',
-    this.showFavoriteButton = true,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Wrap the entire card with GestureDetector for navigation
-    return GestureDetector(
-      onTap: () {
-        _navigateToMenuScreen(context);
-      },
-      child: _buildCardContent(context, ref),
-    );
-  }
-
-  Widget _buildCardContent(BuildContext context, WidgetRef ref) {
-    if (cardType == 'vertical') {
-      return _buildVerticalCard(context, ref);
+  Widget build(BuildContext context) {
+    if (cardType == 'grid') {
+      return _buildGridCard(context);
     } else {
-      return _buildHorizontalCard(context, ref);
+      return _buildHorizontalCard(context);
     }
   }
 
-  void _navigateToMenuScreen(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => StallMenuScreen(stall: stall),
-      ),
-    );
-  }
-
-  // New method to show the animated success dialog
-  Future<void> _showFavoriteSuccessDialog(
-      BuildContext context, WidgetRef ref) async {
-    // Determine the action text before toggling
-    final isCurrentlyFavorite = stall.isFavorite;
-
-    // 1. Toggle the favorite status
-    ref.read(foodStallProvider.notifier).toggleFavorite(stall.id);
-
-    // Only show dialog if adding to favorites
-    if (!isCurrentlyFavorite) {
-      showGeneralDialog(
-        context: context,
-        barrierDismissible: true,
-        barrierLabel: 'Dismiss',
-        pageBuilder: (ctx, a1, a2) {
-          return Container();
-        },
-        transitionBuilder: (context, a1, a2, child) {
-          // Simple scale and opacity transition for a "pop-up" effect
-          return FadeTransition(
-            opacity: a1,
-            child: ScaleTransition(
-              scale: Tween<double>(begin: 0.8, end: 1.0).animate(a1),
-              child: AlertDialog(
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15)),
-                contentPadding:
-                    const EdgeInsets.symmetric(vertical: 20, horizontal: 32),
-                content: SizedBox(
-                  width: 320, // Increased width
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Animated Heart Icon
-                      TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0.0, end: 1.0),
-                        duration: const Duration(milliseconds: 500),
-                        curve: Curves.elasticOut,
-                        builder: (context, scale, child) {
-                          return Transform.scale(
-                            scale: scale,
-                            child: const Icon(
-                              Icons.favorite,
-                              color: Colors.redAccent,
-                              size: 80,
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      // Caption
-                      const Text(
-                        'Successfully Added to Favorites!',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: AppTheme.textColor,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 500),
-      );
-
-      // Wait for the animation to play, then close the dialog automatically.
-      await Future.delayed(const Duration(milliseconds: 800));
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
-    }
-  }
-
-  Widget _buildVerticalCard(BuildContext context, WidgetRef ref) {
+  Widget _buildGridCard(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -158,7 +56,8 @@ class FoodStallCard extends ConsumerWidget {
                     height: 120,
                     color: AppTheme.cardColor,
                     child: const Center(
-                        child: Icon(Icons.image_not_supported, size: 40)),
+                      child: Icon(Icons.image_not_supported, size: 40),
+                    ),
                   ),
                 ),
               ),
@@ -167,12 +66,6 @@ class FoodStallCard extends ConsumerWidget {
                 left: 8,
                 child: _AvailabilityLabel(status: stall.availability),
               ),
-              if (showFavoriteButton)
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: _buildFavoriteButton(context, ref),
-                ),
             ],
           ),
           // Details section
@@ -207,7 +100,7 @@ class FoodStallCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildHorizontalCard(BuildContext context, WidgetRef ref) {
+  Widget _buildHorizontalCard(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
@@ -225,16 +118,16 @@ class FoodStallCard extends ConsumerWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildImageWithOverlays(context, ref),
+          _buildImageWithOverlays(context),
           Expanded(
-            child: _buildCardDetails(context, ref),
+            child: _buildCardDetails(context),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildImageWithOverlays(BuildContext context, WidgetRef ref) {
+  Widget _buildImageWithOverlays(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Stack(
@@ -251,7 +144,8 @@ class FoodStallCard extends ConsumerWidget {
                 width: 80,
                 color: AppTheme.cardColor,
                 child: const Center(
-                    child: Icon(Icons.image_not_supported, size: 24)),
+                  child: Icon(Icons.image_not_supported, size: 24),
+                ),
               ),
             ),
           ),
@@ -265,28 +159,20 @@ class FoodStallCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildCardDetails(BuildContext context, WidgetRef ref) {
+  Widget _buildCardDetails(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  stall.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (showFavoriteButton) _buildFavoriteButton(context, ref),
-            ],
+          Text(
+            stall.name,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
           _buildDetailRow(
@@ -302,33 +188,6 @@ class FoodStallCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildFavoriteButton(BuildContext context, WidgetRef ref) {
-    return GestureDetector(
-      onTap: () async {
-        await _showFavoriteSuccessDialog(context, ref);
-      },
-      child: Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Icon(
-          stall.isFavorite ? Icons.favorite : Icons.favorite_border,
-          color: stall.isFavorite ? Colors.redAccent : AppTheme.subtleTextColor,
-          size: 16,
-        ),
-      ),
-    );
-  }
-
   Widget _buildDetailRow(IconData icon, String text) {
     return Row(
       children: [
@@ -337,8 +196,10 @@ class FoodStallCard extends ConsumerWidget {
         Expanded(
           child: Text(
             text,
-            style:
-                const TextStyle(fontSize: 11, color: AppTheme.subtleTextColor),
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppTheme.subtleTextColor,
+            ),
             overflow: TextOverflow.ellipsis,
           ),
         ),
@@ -411,7 +272,10 @@ class _AvailabilityLabel extends StatelessWidget {
       child: Text(
         _text,
         style: const TextStyle(
-            color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+          color: Colors.white,
+          fontSize: 8,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

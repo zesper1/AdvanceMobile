@@ -214,30 +214,52 @@ class ShopService {
   }
 
   /// if ON DELETE CASCADE is configured on your Postgres foreign keys.
-Future<void> deleteShop(String shopId) async {
-  try {
-    // 1. Perform the deletion on the 'shops' table.
-    // The .delete() method returns a PostgrestFilterBuilder
-    // which allows you to apply the .eq() filter.
-    final response = await _supabase
-        .from('shops')
-        .delete()
-        .eq('shop_id', shopId);
+  Future<void> deleteShop(String shopId) async {
+    try {
+      // 1. Perform the deletion on the 'shops' table.
+      // The .delete() method returns a PostgrestFilterBuilder
+      // which allows you to apply the .eq() filter.
+      final response = await _supabase
+          .from('shops')
+          .delete()
+          .eq('shop_id', shopId);
 
-    // Supabase will throw an exception on network/database errors.
-    // If the request is successful, the response is generally null for DELETE.
-    
-    print('Shop with ID $shopId deleted successfully.');
+      // Supabase will throw an exception on network/database errors.
+      // If the request is successful, the response is generally null for DELETE.
+      
+      print('Shop with ID $shopId deleted successfully.');
 
-  } on PostgrestException catch (error) {
-    // Handle Supabase-specific errors (e.g., RLS policy violation)
-    print('Supabase Error deleting shop: ${error.message}');
-    throw Exception('Database Error: ${error.message}');
-  } catch (error) {
-    // Handle any other general exceptions (e.g., network issues)
-    print('General Error deleting shop: $error');
-    throw Exception('Failed to delete shop: $error');
+    } on PostgrestException catch (error) {
+      // Handle Supabase-specific errors (e.g., RLS policy violation)
+      print('Supabase Error deleting shop: ${error.message}');
+      throw Exception('Database Error: ${error.message}');
+    } catch (error) {
+      // Handle any other general exceptions (e.g., network issues)
+      print('General Error deleting shop: $error');
+      throw Exception('Failed to delete shop: $error');
+    }
   }
-}
+  Future<void> updateShopStatus({
+    required String shopId,
+    required ShopStatus status,
+  }) async {
+    try {
+      // The database 'shop_status' enum uses lowercase values ('pending', 'approved').
+      // We convert the Dart enum's name to the required format.
+      final statusString = status.name.toLowerCase();
+
+      await _supabase
+          .from('shops')
+          .update({'status': statusString})
+          .eq('shop_id', int.parse(shopId)); // The primary key is 'shop_id'
+
+    } on PostgrestException catch (e) {
+      print('Database Error updating shop status: ${e.message}');
+      rethrow;
+    } catch (e) {
+      print('An unexpected error occurred while updating shop status: $e');
+      rethrow;
+    }
+  }
 }
 
