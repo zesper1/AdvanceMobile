@@ -6,8 +6,9 @@ import 'package:panot/widgets/logout_dialog.dart';
 import '../../models/food_stall_model.dart';
 import '../../providers/food_stall_provider.dart';
 import '../../widgets/stalls/food_stall_card.dart';
-import '../../widgets/navbar.dart';
+// import '../../widgets/navbar.dart'; // No longer used
 import '../../theme/app_theme.dart';
+import 'favorites.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -17,6 +18,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  // ... initState, dispose, and build methods are unchanged ...
   final TextEditingController _searchController = TextEditingController();
   String _selectedCategory = 'All';
 
@@ -31,9 +33,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _searchController.dispose();
     super.dispose();
   }
-
+  
   @override
   Widget build(BuildContext context) {
+    // This build method is the same as the previous version
     final allStalls = ref.watch(foodStallProvider);
     final popularShops = ref.watch(popularShopsProvider);
     final favoriteShops = ref.watch(favoriteShopsProvider);
@@ -46,15 +49,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final categories = allStalls.map((stall) => stall.category).toSet().toList();
     categories.insert(0, 'All');
 
-    // TODO: Replace this with the actual user's name from your auth/user provider
-    final String userName = "Juan Dela Cruz";
-    final String firstName = userName.split(' ').first;
-
-    // --- Welcome Section ---
+    final userProfile = ref.watch(authNotifierProvider);
+    final firstName = userProfile.when(
+      data: (profile) => profile?.firstName ?? 'Guest',
+      loading: () => '...',
+      error: (_, __) => 'User',
+    );
+    
     Widget welcomeSection = Container(
       width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(12, 20, 16, 16), // push content a bit to the left
-      padding: const EdgeInsets.fromLTRB(8, 20, 20, 20), // more left padding, less right
+      margin: const EdgeInsets.fromLTRB(12, 12, 16, 12),
+      padding: const EdgeInsets.fromLTRB(8, 12, 16, 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
@@ -65,7 +70,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             offset: const Offset(0, 6),
           ),
         ],
-        // No visible border
         border: Border.all(color: Colors.transparent, width: 0),
       ),
       child: Column(
@@ -74,7 +78,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           RichText(
             text: TextSpan(
               style: const TextStyle(
-                fontSize: 22,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.textColor,
               ),
@@ -83,7 +87,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 TextSpan(
                   text: '($firstName)',
                   style: const TextStyle(
-                    color: Color(0xFF1976D2), // Blue color for the name
+                    color: Color(0xFF1976D2),
                   ),
                 ),
               ],
@@ -93,7 +97,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Text(
             'Here is your daily Nationalian Canteen menu...',
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 12,
               color: AppTheme.textColor.withOpacity(0.93),
               fontWeight: FontWeight.w500,
             ),
@@ -115,9 +119,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const SizedBox(height: 80),
         ],
       ),
-      bottomNavigationBar: const BottomNavBar(initialIndex: 0),
     );
   }
+
 
   PreferredSizeWidget _buildAppBar() {
     return PreferredSize(
@@ -128,39 +132,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             elevation: 0,
             centerTitle: true,
             backgroundColor: Colors.transparent,
-            automaticallyImplyLeading: false, // Prevents default back button
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.logout, color: Colors.white),
-                tooltip: 'Logout',
-                onPressed: () async {
-                  final didRequestLogout = await showLogoutConfirmationDialog(context);
-                  
-                  if (mounted && didRequestLogout == true) {
-                    try {
-                      // UPDATED: Call the signOut method on your AuthNotifier
-                      await ref.read(authNotifierProvider.notifier).signOut();
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(builder: (context) => const LoginScreen()),
-                      );
-                    } catch (e) {
-                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Failed to log out: $e'),
-                          backgroundColor: Theme.of(context).colorScheme.error,
-                        ),
-                      );
-                    }
-                  }
-                },
-              ),
-            ],
+            automaticallyImplyLeading: false,
             flexibleSpace: Opacity(
-              opacity: 0.7, // Lower the opacity of the background image
+              opacity: 0.7,
               child: Container(
                 decoration: const BoxDecoration(
                   image: DecorationImage(
-                    image: AssetImage('assets/NU-D.jpg'), // Use your actual background image
+                    image: AssetImage('assets/NU-D.jpg'),
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -210,29 +188,125 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
           ),
-          // Centered logo on top of the appbar, with margin from the top
           Positioned(
-            top: 0, // Add margin from the top
+            top: 0,
             left: 0,
             right: 0,
             child: Center(
               child: Image.asset(
-                'assets/NU-Dine.png', // Your app logo
+                'assets/NU-Dine.png',
                 height: 70,
                 fit: BoxFit.contain,
               ),
+            ),
+          ),
+          Positioned(
+            top: 12,
+            right: 12,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Favorites circular white button (unchanged)
+                Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  width: 44,
+                  height: 44,
+                  child: Material(
+                    color: Colors.white,
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const FavoritesScreen(),
+                          ),
+                        );
+                      },
+                      child: Center(
+                        child: Icon(
+                          Icons.favorite_border,
+                          color: AppTheme.primaryColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // MODIFIED: Profile circular white button now only prints a log
+                Container(
+                  margin: const EdgeInsets.only(right: 8), // Added margin for spacing
+                  width: 44,
+                  height: 44,
+                  child: Material(
+                    color: Colors.white,
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () {
+                        // Per your request, this now just prints to the console
+                        print('Profile button tapped!');
+                      },
+                      child: Center(
+                        child: Icon(
+                          Icons.person_outline,
+                          color: AppTheme.primaryColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // ADDED: Logout circular white button with the original logout logic
+                Container(
+                  width: 44,
+                  height: 44,
+                  child: Material(
+                    color: Colors.white,
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () async {
+                        final didRequestLogout = await showLogoutConfirmationDialog(context);
+                        if (mounted && didRequestLogout == true) {
+                          try {
+                            await ref.read(authNotifierProvider.notifier).signOut();
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(builder: (context) => const LoginScreen()),
+                            );
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Failed to log out: $e'),
+                                backgroundColor: Theme.of(context).colorScheme.error,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      child: Center(
+                        child: Icon(
+                          Icons.logout, // The original logout icon
+                          color: AppTheme.primaryColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
   }
-
+  
+  // ... rest of the file is unchanged ...
   Widget _buildStallSection(String title, List<FoodStall> stalls, {required bool isHorizontal, required String cardType}) {
     if (stalls.isEmpty) {
       return const SizedBox.shrink();
     }
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
@@ -243,7 +317,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: Text(
               title,
               style: const TextStyle(
-                fontSize: 18,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.textColor,
               ),
@@ -257,12 +331,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
     );
   }
-
- Widget _buildHorizontalStallList(List<FoodStall> stalls, {required String cardType}) {
-final screenWidth = MediaQuery.of(context).size.width;
- final cardWidth = cardType == 'vertical' ? screenWidth * 0.65 : screenWidth * 0.75;
-// INCREASE THIS VALUE: 200.0 -> 240.0
- final cardHeight = cardType == 'vertical' ? 240.0 : 160.0; // SAFE HEIGHT INCREASED
+  
+  Widget _buildHorizontalStallList(List<FoodStall> stalls, {required String cardType}) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth = cardType == 'vertical' ? screenWidth * 0.65 : screenWidth * 0.75;
+    final cardHeight = cardType == 'vertical' ? 240.0 : 160.0;
 
     return SizedBox(
       height: cardHeight,
@@ -312,7 +385,7 @@ final screenWidth = MediaQuery.of(context).size.width;
                 const Text(
                   'By Category',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: AppTheme.textColor,
                   ),
@@ -334,7 +407,7 @@ final screenWidth = MediaQuery.of(context).size.width;
                         value: category,
                         child: Text(
                           category,
-                          style: const TextStyle(fontSize: 14),
+                          style: const TextStyle(fontSize: 12),
                         ),
                       );
                     }).toList(),

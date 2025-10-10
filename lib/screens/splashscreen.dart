@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:panot/providers/auth_provider.dart'; // Make sure this path is correct
+import 'package:panot/screens/admin/admin_home.dart';
 import 'package:panot/screens/login.dart';          // Make sure this path is correct
 import 'package:panot/screens/seller/seller_home.dart';
 import 'package:panot/screens/user/user_shops_screen.dart'; // Import student home
@@ -28,6 +29,9 @@ class SplashScreen extends ConsumerWidget {
             case 'student':
               // If the role is 'student', navigate to the student's home screen.
               return const HomeScreen(); // Adjust if it needs parameters
+            case 'admin':
+              // If the role is 'admin', navigate to the admin's home screen.
+              return const AdminDashboard();
             default:
               // If the role is unknown or null, default to the login screen as a fallback.
               print('Unknown role: ${profile.role}, defaulting to login.');

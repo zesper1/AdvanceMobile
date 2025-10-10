@@ -1,4 +1,3 @@
-// Enum to represent the availability status of a food stall.
 enum AvailabilityStatus { Open, Closed, OnBreak }
 
 class FoodStall {
@@ -11,8 +10,12 @@ class FoodStall {
   final String category;
   final double rating;
   bool isFavorite;
+  final String description;
+  final String location;
+  final bool isOpen;
+  final List<String> customCategories;
 
-  FoodStall({     
+  FoodStall({
     required this.id,
     required this.name,
     required this.imageUrl,
@@ -22,5 +25,9 @@ class FoodStall {
     required this.category,
     required this.rating,
     this.isFavorite = false,
+    this.description = '',
+    this.location = '',
+    this.isOpen = false,
+    this.customCategories = const [],
   });
 }
