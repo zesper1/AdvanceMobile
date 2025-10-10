@@ -137,7 +137,7 @@ class _SellerMenuScreenState extends ConsumerState<SellerMenuScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final menuItems = ref.watch(menuItemsByStallProvider(widget.stall.id));
+    final menuItems = ref.watch(menuItemsByStallProvider(widget.stall.id.toString()));
 
     return Scaffold(
       appBar: AppBar(
@@ -185,7 +185,7 @@ class _SellerMenuScreenState extends ConsumerState<SellerMenuScreen> {
                   }
                 },
                 onChanged: (value) {
-                  ref.read(menuProvider.notifier).searchMenuItems(value, widget.stall.id);
+                  ref.read(menuProvider.notifier).searchMenuItems(value, widget.stall.id.toString());
                 },
               ),
             ),

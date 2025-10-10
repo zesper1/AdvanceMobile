@@ -1,4 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:panot/models/admin_view_model.dart';
+import 'package:panot/models/seller_shop_model.dart' as s;
+import 'package:panot/providers/admin_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // This is a common pattern to get the Supabase client
@@ -30,17 +33,69 @@ class AdminService {
       rethrow;
     }
   }
+    Future<void> updateShopStatus({
+    required String shopId,
+    required ShopStatus status,
+  }) async {
+    try {
+      // The database 'shop_status' enum uses lowercase values ('pending', 'approved').
+      // We convert the Dart enum's name to the required format.
+      final statusString = status.name.toLowerCase();
+
+      await _supabase
+          .from('shops')
+          .update({'status': statusString})
+          .eq('shop_id', int.parse(shopId)); // The primary key is 'shop_id'
+
+    } on PostgrestException catch (e) {
+      print('Database Error updating shop status: ${e.message}');
+      rethrow;
+    } catch (e) {
+      print('An unexpected error occurred while updating shop status: $e');
+      rethrow;
+    }
+  }
+
+// In your admin_services.dart
+
+  Future<List<AdminShopView>> fetchAllShopsDetailed() async {
+    try {
+      final response = await _supabase
+        .from('admin_shops_view')
+        .select();
+
+      // Use the fromJson factory to convert each map in the list into your model
+      final shops = response
+          .map((json) => AdminShopView.fromJson(json))
+          .toList();
+          
+      return shops;
+
+    } catch (e) {
+      print('Error fetching detailed shops: $e');
+      rethrow;
+    }
+  }
 }
 
-// 2. The Provider for the Service
-// This makes the AdminService available to the rest of your app.
 final adminServiceProvider = Provider<AdminService>((ref) {
   return AdminService(ref.watch(supabaseClientProvider));
 });
 
-// 3. A FutureProvider to Fetch the Data for the UI
-// This is the provider your widget will watch.
+final allShopsAdminProvider = FutureProvider.autoDispose<List<AdminShopView>>((ref) {
+  return ref.watch(adminServiceProvider).fetchAllShopsDetailed();
+});
+
 final dashboardAnalyticsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) {
-  // It calls the fetch method from your AdminService
   return ref.watch(adminServiceProvider).fetchDashboardAnalytics();
+});
+
+final adminPendingShopsProvider = Provider.autoDispose<AsyncValue<List<AdminShopView>>>((ref) {
+  // Watch the main admin provider
+  final allShopsAsync = ref.watch(adminNotifierProvider);
+  
+  // Use .whenData to safely filter the list when it's available
+  return allShopsAsync.whenData(
+    (shops) => shops.where((shop) => shop.status == ShopStatus.pending).toList(),
+  );
 });

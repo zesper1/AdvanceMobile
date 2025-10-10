@@ -52,7 +52,7 @@ class FoodStallCard extends ConsumerWidget {
     final isCurrentlyFavorite = stall.isFavorite;
 
     // 1. Toggle the favorite status
-    ref.read(foodStallProvider.notifier).toggleFavorite(stall.id);
+    ref.read(foodStallProvider.notifier).toggleFavorite(stall.id.toString());
 
     // Only show dialog if adding to favorites
     if (!isCurrentlyFavorite) {

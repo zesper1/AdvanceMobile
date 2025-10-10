@@ -1,7 +1,7 @@
 enum AvailabilityStatus { Open, Closed, OnBreak }
 
 class FoodStall {
-  final String id;
+  final int id;
   final String name;
   final String imageUrl;
   final AvailabilityStatus availability;

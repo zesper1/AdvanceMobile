@@ -79,7 +79,7 @@ final stallsByCategoryProvider =
 // Dummy data for initial UI display.
 final List<FoodStall> _dummyData = [
   FoodStall(
-    id: '1',
+    id: 1,
     name: 'Crispy Corner',
     imageUrl: 'https://placehold.co/600x400/FFF4E0/000000?text=Crispy+Corner',
     availability: AvailabilityStatus.Open,
@@ -89,7 +89,7 @@ final List<FoodStall> _dummyData = [
     rating: 4.5,
   ),
   FoodStall(
-    id: '2',
+    id: 2,
     name: 'The Juice Bar',
     imageUrl: 'https://placehold.co/600x400/D2E3C8/000000?text=Juice+Bar',
     availability: AvailabilityStatus.Open,
@@ -100,7 +100,7 @@ final List<FoodStall> _dummyData = [
     isFavorite: true,
   ),
   FoodStall(
-    id: '3',
+    id: 3,
     name: 'Mama\'s Kitchen',
     imageUrl: 'https://placehold.co/600x400/FFD9C0/000000?text=Mama\'s+Kitchen',
     availability: AvailabilityStatus.Closed,
@@ -110,7 +110,7 @@ final List<FoodStall> _dummyData = [
     rating: 4.2,
   ),
   FoodStall(
-    id: '4',
+    id: 4,
     name: 'Quick Bites',
     imageUrl: 'https://placehold.co/600x400/A2CDB0/000000?text=Quick+Bites',
     availability: AvailabilityStatus.OnBreak,
@@ -120,7 +120,7 @@ final List<FoodStall> _dummyData = [
     rating: 3.8,
   ),
    FoodStall(
-    id: '5',
+    id: 5,
     name: 'Ocean Fresh',
     imageUrl: 'https://placehold.co/600x400/8ECDDD/000000?text=Ocean+Fresh',
     availability: AvailabilityStatus.Open,
@@ -131,7 +131,7 @@ final List<FoodStall> _dummyData = [
     isFavorite: true,
   ),
    FoodStall(
-    id: '6',
+    id: 6,
     name: 'Boba Bliss',
     imageUrl: 'https://placehold.co/600x400/F6F4EB/000000?text=Boba+Bliss',
     availability: AvailabilityStatus.Closed,
