@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:panot/providers/auth_provider.dart';
+import 'package:panot/screens/login.dart';
+import 'package:panot/widgets/logout_dialog.dart';
 import '../../models/food_stall_model.dart';
 import '../../providers/food_stall_provider.dart';
 import '../../widgets/stalls/food_stall_card.dart';
@@ -125,6 +128,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             elevation: 0,
             centerTitle: true,
             backgroundColor: Colors.transparent,
+            automaticallyImplyLeading: false, // Prevents default back button
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.logout, color: Colors.white),
+                tooltip: 'Logout',
+                onPressed: () async {
+                  final didRequestLogout = await showLogoutConfirmationDialog(context);
+                  
+                  if (mounted && didRequestLogout == true) {
+                    try {
+                      // UPDATED: Call the signOut method on your AuthNotifier
+                      await ref.read(authNotifierProvider.notifier).signOut();
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(builder: (context) => const LoginScreen()),
+                      );
+                    } catch (e) {
+                       ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to log out: $e'),
+                          backgroundColor: Theme.of(context).colorScheme.error,
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
+            ],
             flexibleSpace: Opacity(
               opacity: 0.7, // Lower the opacity of the background image
               child: Container(

@@ -76,7 +76,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       final String firstName = _firstNameController.text.trim();
       final String lastName = _lastNameController.text.trim();
       final String role = _selectedRole!.toLowerCase().replaceAll(' ', '_');
-
+      final String studentId = _studentIdController.text.trim();
+      final String course = _selectedCourse ?? '';
+      final int yearLevel = _selectedYearLevel != null ? _parseYearLevel(_selectedYearLevel!) : 0;
+      print('Role: $role, Student ID: $studentId, Course: $course, Year Level: $yearLevel');
   // Prepare metadata for the user
   Map<String, dynamic> userMetadata = {
     'first_name': firstName,
@@ -85,14 +88,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   };
 
   // If the user is a student, add their specific details to the metadata
-  if (role == 'Student') {
+  if (role == 'student') {
     userMetadata.addAll({
-      'student_id': _studentIdController.text.trim(),
-      'course': _selectedCourse!,
-      'year_level': _parseYearLevel(_selectedYearLevel!),
+      'student_id': studentId,
+      'course': course,
+      'year_level': yearLevel,
     });
   }
-
+  print(userMetadata);
   try {
       // Call the notifier's signUp method once with all the data
       await ref.read(authNotifierProvider.notifier).signUp(
