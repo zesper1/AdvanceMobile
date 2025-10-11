@@ -40,7 +40,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
   @override
   Widget build(BuildContext context) {
     // Watch the favorite shops provider
-    final favoriteShops = ref.watch(favoriteShopsProvider);
+    final favoriteShopsAsync = ref.watch(favoriteShopsProvider);
 
     // Use NestedScrollView for a modern, cohesive UI with a collapsing AppBar
     return Scaffold(
@@ -58,7 +58,20 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
 
             // Dynamic Content
             Expanded(
-              child: _buildContent(favoriteShops),
+              child: favoriteShopsAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, stack) => Center(child: Text('Failed to load favorites: $err')),
+                data: (favoriteShops) {
+                  // Data is ready: now we pass the synchronous List<FoodStall> 
+                  // to _buildContent, which must be updated to accept the list.
+
+                  // NOTE: You need to pass the required TabController here, 
+                  // which should be defined and initialized in the parent StatefulWidget.
+                  final TabController tabController = DefaultTabController.of(context)!; 
+                  
+                  return _buildContent(ref, tabController);
+                },
+              ),
             ),
           ],
         ),
@@ -178,17 +191,48 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
 
   // The rest of the content remains mostly the same, ensuring it's aesthetically pleasing.
 
-  Widget _buildContent(List<FoodStall> favoriteShops) {
-    return TabBarView(
-      controller: _tabController,
-      children: [
-        // Shop Section
-        _buildShopSection(favoriteShops),
+  // NOTE: Ensure your parent widget passes the required WidgetRef and TabController.
+  Widget _buildContent(WidgetRef ref, TabController tabController) {
+      // 1. Watch the asynchronous provider for favorite shops
+      final favoriteShopsAsync = ref.watch(favoriteShopsProvider);
 
-        // Food Section (Placeholder for now)
-        _buildFoodSection(),
-      ],
-    );
+      return favoriteShopsAsync.when(
+          // 1. Loading State: Display a spinner while waiting for data.
+          loading: () => const Center(child: CircularProgressIndicator()),
+
+          // 2. Error State: Display the error message.
+          error: (err, stack) => Center(child: Text('Error loading favorites: $err')),
+
+          // 3. Data State (success): Data is available as a List<FoodStall>.
+          data: (favoriteShops) {
+              // Check if the list is empty and display a custom message if so.
+              if (favoriteShops.isEmpty) {
+                  return const Center(
+                      child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                              Icon(Icons.favorite_border, size: 60, color: Colors.grey),
+                              SizedBox(height: 16),
+                              Text('No favorite shops yet.', style: TextStyle(fontSize: 16)),
+                              Text('Tap the ❤️ on a shop to add it here.', style: TextStyle(color: Colors.grey)),
+                          ],
+                      ),
+                  );
+              }
+              
+              // Return the TabBarView with the actual data
+              return TabBarView(
+                  controller: tabController,
+                  children: [
+                      // Shop Section: Pass the synchronous List<FoodStall>
+                      _buildShopSection(favoriteShops),
+
+                      // Food Section (Placeholder for now)
+                      _buildFoodSection(),
+                  ],
+              );
+          },
+      );
   }
 
   Widget _buildShopSection(List<FoodStall> favoriteShops) {

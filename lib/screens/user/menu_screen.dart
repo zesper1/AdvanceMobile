@@ -1,17 +1,21 @@
-// screens/stall_menu_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/food_stall_model.dart';
-import '../../models/menu_model.dart';
+import '../../models/product_model.dart';
 import '../../providers/food_stall_provider.dart';
-import '../../providers/menu_provider.dart';
+import '../../providers/product_provider.dart';
 import '../../theme/app_theme.dart';
-import '../seller/menu_screen.dart'; // <-- Make sure this import is correct for your project
 
 class StallMenuScreen extends ConsumerStatefulWidget {
   final FoodStall stall;
+  // 1. ADD NULLABLE FLAG: Defaults to true (show the button)
+  final bool? showFavoriteButton; 
 
-  const StallMenuScreen({super.key, required this.stall});
+  const StallMenuScreen({
+    super.key, 
+    required this.stall,
+    this.showFavoriteButton = false, // Default to true (buyer mode)
+  });
 
   @override
   ConsumerState<StallMenuScreen> createState() => _StallMenuScreenState();
@@ -19,31 +23,33 @@ class StallMenuScreen extends ConsumerStatefulWidget {
 
 class _StallMenuScreenState extends ConsumerState<StallMenuScreen> {
   final TextEditingController _searchController = TextEditingController();
-  bool _isFavorite = false;
+  
+  // We no longer need to manage _isFavorite via StatefulWidget state 
+  // if we watch the provider, but for now we keep it to minimize changes.
+  // The 'isFavorite' state should eventually be watched using a Provider.family
+  bool _isFavorite = false; 
 
   @override
   void initState() {
     super.initState();
     _searchController.text = 'Search menu...';
-    _isFavorite = widget.stall.isFavorite;
+    // Initialize based on the stall model's current status
+    _isFavorite = widget.stall.isFavorite; 
   }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
+  
   Future<void> _showFavoriteSuccessDialog(BuildContext context, WidgetRef ref) async {
     final isCurrentlyFavorite = _isFavorite;
 
-    // Toggle favorite status
-    ref.read(foodStallProvider.notifier).toggleFavorite(widget.stall.id.toString());
+    // Toggle favorite status using the updated Notifier method
+    // Note: The toggleFavorite method handles the DB update and local state refresh
+    await ref.read(foodStallProvider.notifier).toggleFavorite(widget.stall.id);
+    
+    // Update local state and trigger rebuild for the icon change
     setState(() {
       _isFavorite = !_isFavorite;
     });
 
-    // Only show dialog if adding to favorites
+    // ... (Your showGeneralDialog implementation remains the same) ...
     if (!isCurrentlyFavorite) {
       showGeneralDialog(
         context: context,
@@ -107,13 +113,14 @@ class _StallMenuScreenState extends ConsumerState<StallMenuScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final menuItems = ref.watch(menuItemsByStallProvider(widget.stall.id.toString()));
+    final menuItemsAsync = ref.watch(productProvider(widget.stall.id));
+    // Check the new flag for conditional rendering
+    final shouldShowFavorite = widget.showFavoriteButton ?? false; 
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: CustomScrollView(
         slivers: [
-          // App Bar with custom design
           SliverAppBar(
             backgroundColor: AppTheme.accentColor,
             elevation: 0,
@@ -131,85 +138,42 @@ class _StallMenuScreenState extends ConsumerState<StallMenuScreen> {
               ),
             ),
             actions: [
-              Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: CircleAvatar(
-                  backgroundColor: Colors.white,
-                  child: IconButton(
-                    icon: Icon(
-                      _isFavorite ? Icons.favorite : Icons.favorite_border,
-                      color: _isFavorite ? Colors.redAccent : AppTheme.textColor,
+              // CONDITIONAL RENDERING: Only show the button if the flag is true
+              if (shouldShowFavorite)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: CircleAvatar(
+                    backgroundColor: Colors.white,
+                    child: IconButton(
+                      icon: Icon(
+                        _isFavorite ? Icons.favorite : Icons.favorite_border,
+                        color: _isFavorite ? Colors.redAccent : AppTheme.textColor,
+                      ),
+                      onPressed: () => _showFavoriteSuccessDialog(context, ref),
                     ),
-                    onPressed: () => _showFavoriteSuccessDialog(context, ref),
                   ),
                 ),
-              ),
             ],
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,
                 children: [
+                  // Assuming 'assets/NU-Dine.png' is your background asset
                   Image.asset(
-                    'assets/NU-Dine.png', // Replace with your desired background image asset
+                    'assets/NU-Dine.png', 
                     fit: BoxFit.cover,
                   ),
                   Container(
-                    color: AppTheme.accentColor.withOpacity(0.7), // Optional overlay for readability
+                    color: AppTheme.accentColor.withOpacity(0.7), // Optional overlay
                   ),
                 ],
               ),
             ),
           ),
-
-          // Main Content
+          // Main Content (unchanged)
           SliverToBoxAdapter(
             child: Column(
               children: [
-                // Stall Name
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
-                  child: Text(
-                    widget.stall.name,
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textColor,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-
-                // Seller Access Button
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.store, color: Colors.white),
-                      label: const Text(
-                        'Seller Access',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => SellerMainScreen(stall: widget.stall),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-
-                // Search Bar
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                   child: Container(
@@ -241,48 +205,69 @@ class _StallMenuScreenState extends ConsumerState<StallMenuScreen> {
                         }
                       },
                       onChanged: (value) {
-                        ref.read(menuProvider.notifier).searchMenuItems(value, widget.stall.id.toString());
+                        ref.read(productProvider(widget.stall.id).notifier).searchProducts(value);
                       },
                     ),
                   ),
                 ),
 
                 const SizedBox(height: 16),
+                    Text(widget.stall.name,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.subtleTextColor,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ],
             ),
           ),
-
-          // Menu Items List
-          if (menuItems.isEmpty)
-            const SliverToBoxAdapter(
-              child: Padding(
+          // Menu List (unchanged)
+          menuItemsAsync.when(
+            loading: () => const SliverToBoxAdapter(
+              child: Center(child: Padding(
                 padding: EdgeInsets.all(32.0),
-                child: Text(
-                  'No menu items found',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: AppTheme.subtleTextColor,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            )
-          else
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final menuItem = menuItems[index];
-                  return _buildMenuItemCard(menuItem);
-                },
-                childCount: menuItems.length,
-              ),
+                child: CircularProgressIndicator(color: AppTheme.primaryColor),
+              )),
             ),
+            error: (err, stack) => SliverToBoxAdapter(
+              child: Center(child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Text('Failed to load menu: $err'),
+              )),
+            ),
+            data: (menuItems) {
+              if (menuItems.isEmpty) {
+                return const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.all(32.0),
+                    child: Text(
+                      'No menu items found',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppTheme.subtleTextColor,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                );
+              }
+              return SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final menuItem = menuItems[index];
+                    return _buildMenuItemCard(menuItem);
+                  },
+                  childCount: menuItems.length,
+                ),
+              );
+            },
+          ),
         ],
       ),
     );
   }
-
-  Widget _buildMenuItemCard(MenuItem menuItem) {
+  Widget _buildMenuItemCard(Product menuItem) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(12),
@@ -307,7 +292,7 @@ class _StallMenuScreenState extends ConsumerState<StallMenuScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  menuItem.name,
+                  menuItem.productName, // Use 'productName'
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -327,16 +312,16 @@ class _StallMenuScreenState extends ConsumerState<StallMenuScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${menuItem.stock} left in stock',
+                  '${menuItem.quantity} left in stock', // Use 'quantity'
                   style: TextStyle(
                     fontSize: 12,
-                    color: menuItem.stock > 5 ? Colors.green : Colors.orange,
+                    color: menuItem.quantity > 5 ? Colors.green : Colors.orange,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  menuItem.description,
+                  menuItem.description ?? '', // Description is nullable
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppTheme.subtleTextColor,
@@ -353,7 +338,7 @@ class _StallMenuScreenState extends ConsumerState<StallMenuScreen> {
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Image.network(
-              menuItem.imageUrl,
+              menuItem.imageUrl ?? '', // ImageUrl is nullable
               width: 80,
               height: 80,
               fit: BoxFit.cover,

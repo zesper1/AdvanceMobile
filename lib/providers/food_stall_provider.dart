@@ -1,143 +1,113 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:panot/services/shop_services.dart';
 import '../models/food_stall_model.dart';
 
-// Manages the state of the food stalls list.
-class FoodStallNotifier extends StateNotifier<List<FoodStall>> {
-  FoodStallNotifier() : super(_dummyData);
+// 1. Provider for the service dependency
+// This assumes FoodStallService class exists and is defined.
+final foodStallServiceProvider = Provider((ref) => ShopService());
 
-  // Toggles the favorite status of a specific food stall.
-  void toggleFavorite(String stallId) {
-    state = [
-      for (final stall in state)
-        if (stall.id == stallId)
-          FoodStall(
-            id: stall.id,
-            name: stall.name,
-            imageUrl: stall.imageUrl,
-            availability: stall.availability,
-            openingTime: stall.openingTime,
-            closingTime: stall.closingTime,
-            category: stall.category,
-            rating: stall.rating,
-            isFavorite: !stall.isFavorite,
-          )
-        else
-          stall,
-    ];
+// 2. The Asynchronous Notifier
+class FoodStallNotifier extends AutoDisposeAsyncNotifier<List<FoodStall>> {
+  
+  // The build method replaces the constructor and handles the initial fetch
+  // It runs automatically when the provider is first watched.
+  @override
+  Future<List<FoodStall>> build() async {
+    // Call the service to fetch data from Supabase
+    return ref.read(foodStallServiceProvider).fetchAllStalls();
   }
 
-  // Search stalls by name or category
-  void searchStalls(String query) {
-    if (query.isEmpty || query == 'Looking for something?') {
-      state = _dummyData; // Reset to original data when search is cleared
-    } else {
-      final filteredStalls = _dummyData.where((stall) {
-        return stall.name.toLowerCase().contains(query.toLowerCase()) ||
-            stall.category.toLowerCase().contains(query.toLowerCase());
-      }).toList();
-      
-      state = filteredStalls;
+  // Toggles the favorite status of a specific food stall.
+  // The stallId must be an integer, matching the model and DB id.
+  Future<void> toggleFavorite(int stallId) async {
+    // 1. Get the current list and the item to update
+    final currentStalls = state.value;
+    if (currentStalls == null) return;
+
+    final stallIndex = currentStalls.indexWhere((stall) => stall.id == stallId);
+    if (stallIndex == -1) return;
+    
+    final currentStall = currentStalls[stallIndex];
+    final newFavoriteStatus = !currentStall.isFavorite;
+
+    try {
+        // 2. Perform the database update asynchronously
+        await ref.read(foodStallServiceProvider).toggleFavoriteStatus(
+            stallId, 
+            newFavoriteStatus,
+        );
+
+        // 3. Update local state immediately for fast UI feedback
+        final updatedStall = currentStall.copyWith(isFavorite: newFavoriteStatus);
+        
+        // Create a new list to trigger state change
+        final newState = List<FoodStall>.from(currentStalls);
+        newState[stallIndex] = updatedStall;
+
+        state = AsyncValue.data(newState);
+        
+    } catch (e) {
+        // Handle network/DB error (e.g., show an error snackbar in UI)
+        // You might re-throw the error or log it.
+        throw Exception('Failed to update favorite status: $e');
     }
+  }
+
+  // Search stalls by name or category (filters the currently loaded data)
+  void searchStalls(String query) {
+    state.whenData((stalls) {
+      if (query.isEmpty || query == 'Looking for something?') {
+        // Refetching is the cleanest way to reset the filtered state in an AsyncNotifier.
+        ref.invalidateSelf();
+      } else {
+        final lowerCaseQuery = query.toLowerCase();
+        final filteredStalls = stalls.where((stall) {
+          return stall.name.toLowerCase().contains(lowerCaseQuery) ||
+              stall.category.toLowerCase().contains(lowerCaseQuery);
+        }).toList();
+        
+        state = AsyncValue.data(filteredStalls);
+      }
+    });
   }
 }
 
-// Provider to access the FoodStallNotifier.
+// Provider to access the FoodStallNotifier (now an AutoDisposeAsyncNotifier)
 final foodStallProvider =
-    StateNotifierProvider<FoodStallNotifier, List<FoodStall>>((ref) {
+    AutoDisposeAsyncNotifierProvider<FoodStallNotifier, List<FoodStall>>(() {
   return FoodStallNotifier();
 });
 
-// --- Derived Providers for UI Sections ---
+// --- Derived Providers for UI Sections (Must handle AsyncValue<List<T>>) ---
 
 // Provider to get only the list of favorite shops.
-final favoriteShopsProvider = Provider<List<FoodStall>>((ref) {
-  final allStalls = ref.watch(foodStallProvider);
-  return allStalls.where((stall) => stall.isFavorite).toList();
+final favoriteShopsProvider = Provider<AsyncValue<List<FoodStall>>>((ref) {
+  // Watch the main async provider and filter the data when it's available
+  return ref.watch(foodStallProvider).whenData(
+    (stalls) => stalls.where((stall) => stall.isFavorite).toList(),
+  );
 });
 
 // Provider to get popular shops (e.g., rating > 4.0).
-final popularShopsProvider = Provider<List<FoodStall>>((ref) {
-  final allStalls = ref.watch(foodStallProvider);
-  return allStalls.where((stall) => stall.rating > 4.0).toList();
+final popularShopsProvider = Provider<AsyncValue<List<FoodStall>>>((ref) {
+  return ref.watch(foodStallProvider).whenData(
+    (stalls) => stalls.where((stall) => stall.rating > 4.0).toList(),
+  );
 });
 
 // Provider to get currently open shops.
-final currentlyOpenShopsProvider = Provider<List<FoodStall>>((ref) {
-  final allStalls = ref.watch(foodStallProvider);
-  return allStalls
-      .where((stall) => stall.availability == AvailabilityStatus.Open)
-      .toList();
+final currentlyOpenShopsProvider = Provider<AsyncValue<List<FoodStall>>>((ref) {
+  return ref.watch(foodStallProvider).whenData(
+    (stalls) => stalls.where((stall) => stall.availability == AvailabilityStatus.Open).toList(),
+  );
 });
 
 // Provider factory to filter stalls by a specific category.
 final stallsByCategoryProvider =
-    Provider.family<List<FoodStall>, String>((ref, category) {
-  final allStalls = ref.watch(foodStallProvider);
-  return allStalls.where((stall) => stall.category == category).toList();
+    Provider.family<AsyncValue<List<FoodStall>>, String>((ref, category) {
+  return ref.watch(foodStallProvider).whenData(
+    (stalls) => stalls.where((stall) => stall.category == category).toList(),
+  );
 });
 
-// Dummy data for initial UI display.
-final List<FoodStall> _dummyData = [
-  FoodStall(
-    id: 1,
-    name: 'Crispy Corner',
-    imageUrl: 'https://placehold.co/600x400/FFF4E0/000000?text=Crispy+Corner',
-    availability: AvailabilityStatus.Open,
-    openingTime: '08:00 AM',
-    closingTime: '10:00 PM',
-    category: 'Snack',
-    rating: 4.5,
-  ),
-  FoodStall(
-    id: 2,
-    name: 'The Juice Bar',
-    imageUrl: 'https://placehold.co/600x400/D2E3C8/000000?text=Juice+Bar',
-    availability: AvailabilityStatus.Open,
-    openingTime: '09:00 AM',
-    closingTime: '08:00 PM',
-    category: 'Drinks',
-    rating: 4.8,
-    isFavorite: true,
-  ),
-  FoodStall(
-    id: 3,
-    name: 'Mama\'s Kitchen',
-    imageUrl: 'https://placehold.co/600x400/FFD9C0/000000?text=Mama\'s+Kitchen',
-    availability: AvailabilityStatus.Closed,
-    openingTime: '10:00 AM',
-    closingTime: '09:00 PM',
-    category: 'Meal',
-    rating: 4.2,
-  ),
-  FoodStall(
-    id: 4,
-    name: 'Quick Bites',
-    imageUrl: 'https://placehold.co/600x400/A2CDB0/000000?text=Quick+Bites',
-    availability: AvailabilityStatus.OnBreak,
-    openingTime: '11:00 AM',
-    closingTime: '11:00 PM',
-    category: 'Snack',
-    rating: 3.8,
-  ),
-   FoodStall(
-    id: 5,
-    name: 'Ocean Fresh',
-    imageUrl: 'https://placehold.co/600x400/8ECDDD/000000?text=Ocean+Fresh',
-    availability: AvailabilityStatus.Open,
-    openingTime: '10:00 AM',
-    closingTime: '09:00 PM',
-    category: 'Meal',
-    rating: 4.9,
-    isFavorite: true,
-  ),
-   FoodStall(
-    id: 6,
-    name: 'Boba Bliss',
-    imageUrl: 'https://placehold.co/600x400/F6F4EB/000000?text=Boba+Bliss',
-    availability: AvailabilityStatus.Closed,
-    openingTime: '12:00 PM',
-    closingTime: '10:00 PM',
-    category: 'Drinks',
-    rating: 4.1,
-  ),
-];
+// The List<FoodStall> _dummyData is removed.

@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:panot/models/food_stall_model.dart';
+import 'package:panot/models/shop_subcategory.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:path/path.dart' as path;
 import '../models/seller_shop_model.dart';
@@ -116,17 +118,19 @@ class ShopService {
       rethrow;
     }
   }
-    /// Updates an existing shop, handles optional image replacement, and syncs subcategories.
+  // lib/services/shop_services.dart
+
+  /// Updates an existing shop, handles optional image replacement, and syncs subcategories.
   Future<void> updateShop({
     required String shopId,
     required String shopName,
     required String description,
-    XFile? newImageFile,      // The new image file, if one was selected
-    String? existingImageUrl, // The URL of the current image, for cleanup
+    XFile? newImageFile,        // The new image file, if one was selected
+    String? existingImageUrl,  // The URL of the current image, for cleanup
     required TimeOfDay openingTime,
     required TimeOfDay closingTime,
-    required int categoryId,         // The ID of the main category
-    required List<int> subcategoryIds, // The IDs of the selected subcategories
+    required int categoryId,
+    required List<int> subcategoryIds,
   }) async {
     try {
       final sellerId = _supabase.auth.currentUser?.id;
@@ -134,10 +138,11 @@ class ShopService {
         throw Exception('User is not authenticated.');
       }
 
+      // ✅ 1. Assume the URL won't change by default
       String? imageUrlForUpdate = existingImageUrl;
       const bucket = 'shop_image';
 
-      // --- 1. HANDLE IMAGE UPDATE (IF A NEW IMAGE IS PROVIDED) ---
+      // ✅ 2. Only run this block if a new image was actually provided
       if (newImageFile != null) {
         // A) Upload the new image
         final fileExtension = path.extension(newImageFile.name);
@@ -158,9 +163,10 @@ class ShopService {
               );
         }
         
+        // B) Overwrite the URL variable with the new URL
         imageUrlForUpdate = _supabase.storage.from(bucket).getPublicUrl(newStoragePath);
 
-        // B) Clean up the old image from storage to save space
+        // C) Clean up the old image from storage to save space
         if (existingImageUrl != null && existingImageUrl.isNotEmpty) {
           final oldPath = _getStoragePathFromUrl(existingImageUrl);
           if (oldPath != null) {
@@ -169,7 +175,7 @@ class ShopService {
         }
       }
 
-      // --- 2. PREPARE PARAMETERS FOR THE RPC CALL ---
+      // --- 3. PREPARE PARAMETERS FOR THE RPC CALL ---
       final openingTimeStr = '${openingTime.hour.toString().padLeft(2, '0')}:${openingTime.minute.toString().padLeft(2, '0')}:00';
       final closingTimeStr = '${closingTime.hour.toString().padLeft(2, '0')}:${closingTime.minute.toString().padLeft(2, '0')}:00';
 
@@ -177,14 +183,14 @@ class ShopService {
         'p_shop_id': int.parse(shopId),
         'p_name': shopName,
         'p_description': description,
-        'p_image_url': imageUrlForUpdate, // Use the new or existing URL
+        'p_image_url': imageUrlForUpdate, // ✅ 4. Use the final URL (either new or old)
         'p_opening_time': openingTimeStr,
         'p_closing_time': closingTimeStr,
         'p_category_id': categoryId,
-        'p_subcategory_ids': subcategoryIds, // Pass the list of integer IDs
+        'p_subcategory_ids': subcategoryIds,
       };
 
-      // --- 3. EXECUTE THE RPC ---
+      // --- 5. EXECUTE THE RPC ---
       await _supabase.rpc('update_shop_with_subcategories', params: params);
 
     } on StorageException catch (e) {
@@ -198,7 +204,52 @@ class ShopService {
       rethrow;
     }
   }
+  
+  Future<void> updateShopDetails({
+    required int shopId,
+    required String shopName,
+    required String description,
+    required int categoryId,
+    required TimeOfDay openingTime,
+    required TimeOfDay closingTime,
+  }) async {
+    // Format TimeOfDay to 'HH:MM:SS' string format for PostgreSQL TIME WITHOUT TIME ZONE
+    // TimeOfDay hour and minute are 0-padded to 2 digits.
+    String formatTimeOfDayToPostgres(TimeOfDay time) {
+      final hour = time.hour.toString().padLeft(2, '0');
+      final minute = time.minute.toString().padLeft(2, '0');
+      
+      // The database requires a full time string; seconds are set to 00.
+      return '$hour:$minute:00'; 
+    }
 
+    final openingTimeString = formatTimeOfDayToPostgres(openingTime);
+    final closingTimeString = formatTimeOfDayToPostgres(closingTime);
+
+    try {
+      // Execute the update query.
+      // We also update 'updated_at' to now(), which is a common practice 
+      // but should be handled by a database trigger if possible. 
+      // However, we include it here for an immediate update.
+      await _supabase
+          .from('shops')
+          .update({
+            'shop_name': shopName,
+            'description': description,
+            'category_id': categoryId,
+            'opening_time': openingTimeString,
+            'closing_time': closingTimeString,
+            // You can optionally add 'updated_at': DateTime.now().toIso8601String(), 
+            // but a database trigger is more reliable.
+          })
+          .eq('shop_id', shopId).select(); // Ensure the query is executed
+              
+      } catch (e) {
+      // Log the error and re-throw a more user-friendly error
+      debugPrint('Error updating shop details: $e');
+      throw Exception('Failed to update shop details. Please try again.');
+    }
+  }
   /// Helper function to extract the storage path from a public URL.
   String? _getStoragePathFromUrl(String url) {
     const bucketName = 'shop_image';
@@ -238,6 +289,57 @@ class ShopService {
       print('General Error deleting shop: $error');
       throw Exception('Failed to delete shop: $error');
     }
+  }
+  /// Fetches a list of subcategory names for a specific shop.
+  // MODIFIED: This function now returns the correct model type.
+  Future<List<ShopSubcategory>> getShopSubcategories(int shopId) async {
+    try {
+      final response = await _supabase.rpc(
+        'get_shop_subcategories',
+        params: {'p_shop_id': shopId},
+      );
+      
+      // Map the raw list of JSON objects into a list of ShopSubcategory models.
+      return (response as List)
+          .map((json) => ShopSubcategory.fromJson(json as Map<String, dynamic>))
+          .toList();
+          
+    } catch (e) {
+      print('Error fetching shop subcategories: $e');
+      rethrow;
+    }
+  }
+
+  // NOTE: This service function handles the Supabase query.
+  Future<List<FoodStall>> fetchAllStalls() async {
+    // Replace with your actual Supabase query
+    final List<Map<String, dynamic>> response = await _supabase
+        .from('shops')
+        .select('*, shop_categories(category_name)') // JOIN with categories
+        // You would typically join a user_favorites table here to get 'is_favorite'
+        .order('rating', ascending: false);
+
+    // Map the raw List<Map> to List<FoodStall> using the factory constructor
+    return response.map((map) {
+      // Flatten the category name from the joined object
+      final categoryName = map['shop_categories'] != null 
+          ? (map['shop_categories'] as Map<String, dynamic>)['category_name'] 
+          : 'N/A';
+      
+      // Merge the category name into the top-level map for the model parser
+      final flatMap = {...map, 'category_name': categoryName};
+      
+      return FoodStall.fromMap(flatMap);
+    }).toList();
+  }
+
+  // Service function to update favorite status in the database
+  // This would typically insert/delete a row in a 'user_favorites' table
+  Future<void> toggleFavoriteStatus(int stallId, bool isFavorite) async {
+    // Implement your Supabase RLS logic here to update the user's favorites table.
+    // Since we don't have the table definition, this is a placeholder.
+    await Future.delayed(const Duration(milliseconds: 300));
+    print('DB Action: Set stall $stallId favorite to $isFavorite');
   }
 }
 

@@ -36,93 +36,155 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   
   @override
   Widget build(BuildContext context) {
-    // This build method is the same as the previous version
-    final allStalls = ref.watch(foodStallProvider);
-    final popularShops = ref.watch(popularShopsProvider);
-    final favoriteShops = ref.watch(favoriteShopsProvider);
-    final openShops = ref.watch(currentlyOpenShopsProvider);
+    // Watch all primary async values. They all return AsyncValue<List<FoodStall>>.
+    final allStallsAsync = ref.watch(foodStallProvider);
+    final popularShopsAsync = ref.watch(popularShopsProvider);
+    final favoriteShopsAsync = ref.watch(favoriteShopsProvider);
+    final openShopsAsync = ref.watch(currentlyOpenShopsProvider);
 
-    final categoryShops = _selectedCategory == 'All'
-        ? allStalls
-        : ref.watch(stallsByCategoryProvider(_selectedCategory));
-
-    final categories = allStalls.map((stall) => stall.category).toSet().toList();
-    categories.insert(0, 'All');
-
+    // Watch the user profile (already correctly handling AsyncValue)
     final userProfile = ref.watch(authNotifierProvider);
     final firstName = userProfile.when(
       data: (profile) => profile?.firstName ?? 'Guest',
       loading: () => '...',
       error: (_, __) => 'User',
     );
-    
-    Widget welcomeSection = Container(
-      width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(12, 12, 16, 12),
-      padding: const EdgeInsets.fromLTRB(8, 12, 16, 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryColor.withOpacity(0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-        border: Border.all(color: Colors.transparent, width: 0),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          RichText(
-            text: TextSpan(
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textColor,
-              ),
-              children: [
-                const TextSpan(text: 'Welcome Nationalian '),
-                TextSpan(
-                  text: '($firstName)',
-                  style: const TextStyle(
-                    color: Color(0xFF1976D2),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Here is your daily Nationalian Canteen menu...',
-            style: TextStyle(
-              fontSize: 12,
-              color: AppTheme.textColor.withOpacity(0.93),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
 
-    return Scaffold(
-      appBar: _buildAppBar(),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
-        children: [
-          welcomeSection,
-          _buildStallSection('Popular Shops', popularShops, isHorizontal: true, cardType: 'vertical'),
-          _buildStallSection('Favorites', favoriteShops, isHorizontal: true, cardType: 'vertical'),
-          _buildStallSection('Currently Open', openShops, isHorizontal: false, cardType: 'horizontal'),
-          _buildCategorySection(categories, categoryShops),
-          const SizedBox(height: 80),
-        ],
+    // --- Start of UI/State Handling ---
+
+    // 1. We must wait for the *base* list (allStallsAsync) to load before
+    //    we can calculate categories or filter the main view.
+    return allStallsAsync.when(
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: AppTheme.primaryColor)),
       ),
+      error: (error, stack) => Scaffold(
+        appBar: _buildAppBar(),
+        body: Center(child: Text('Error loading data: $error')),
+      ),
+      data: (allStallsList) { // This is the synchronous List<FoodStall>
+        // 2. Data is ready. Calculate categories using the synchronous list.
+        final categories = allStallsList.map((stall) => stall.category).toSet().toList();
+        categories.insert(0, 'All');
+
+        // 3. Get the category-filtered list (which is also AsyncValue)
+        final categoryShopsAsync = _selectedCategory == 'All'
+            ? allStallsAsync // Pass the already resolved AsyncValue.data(allStallsList)
+            : ref.watch(stallsByCategoryProvider(_selectedCategory));
+            
+        // Ensure the categoryShops are resolved to a synchronous list for use below.
+        final categoryShopsList = categoryShopsAsync.value ?? [];
+
+
+        Widget welcomeSection = Container(
+          // ... (Your welcomeSection implementation, using firstName)
+          width: double.infinity,
+          margin: const EdgeInsets.fromLTRB(12, 12, 16, 12),
+          padding: const EdgeInsets.fromLTRB(8, 12, 16, 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.primaryColor.withOpacity(0.08),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+            ],
+            border: Border.all(color: Colors.transparent, width: 0),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              RichText(
+                text: TextSpan(
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textColor,
+                  ),
+                  children: [
+                    const TextSpan(text: 'Welcome Nationalian '),
+                    TextSpan(
+                      text: '($firstName)',
+                      style: const TextStyle(
+                        color: Color(0xFF1976D2),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Here is your daily Nationalian Canteen menu...',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.textColor.withOpacity(0.93),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        );
+
+        return Scaffold(
+          appBar: _buildAppBar(),
+          body: ListView(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            children: [
+              welcomeSection,
+              
+              // 4. Wrap derived sections in their own .when() to handle loading/error
+              //    state independently. If the base list (allStallsList) loaded, 
+              //    these derived lists should also load quickly.
+              
+              // Popular Shops Section
+              popularShopsAsync.when(
+                loading: () => _buildSectionPlaceholder('Popular Shops'),
+                error: (_, __) => const SizedBox.shrink(),
+                data: (stalls) => _buildStallSection('Popular Shops', stalls, isHorizontal: true, cardType: 'vertical'),
+              ),
+              
+              // Favorites Section
+              favoriteShopsAsync.when(
+                loading: () => _buildSectionPlaceholder('Favorites'),
+                error: (_, __) => const SizedBox.shrink(),
+                data: (stalls) => _buildStallSection('Favorites', stalls, isHorizontal: true, cardType: 'vertical'),
+              ),
+
+              // Currently Open Section
+              openShopsAsync.when(
+                loading: () => _buildSectionPlaceholder('Currently Open'),
+                error: (_, __) => const SizedBox.shrink(),
+                data: (stalls) => _buildStallSection('Currently Open', stalls, isHorizontal: false, cardType: 'horizontal'),
+              ),
+
+              // Category Section (uses the synchronous list derived earlier)
+              _buildCategorySection(categories, categoryShopsList),
+              
+              const SizedBox(height: 80),
+            ],
+          ),
+        );
+      },
     );
   }
-
-
+  Widget _buildSectionPlaceholder(String title) {
+      return Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                  Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  const SizedBox(
+                      height: 100,
+                      child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  ),
+              ],
+          ),
+      );
+  }
   PreferredSizeWidget _buildAppBar() {
     return PreferredSize(
       preferredSize: const Size.fromHeight(130),

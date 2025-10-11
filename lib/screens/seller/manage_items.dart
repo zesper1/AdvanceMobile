@@ -123,7 +123,7 @@ class _ManageStoreScreenState extends ConsumerState<ManageStoreScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    menuItem.category,
+                    menuItem.category!,
                     style: const TextStyle(
                       color: AppTheme.subtleTextColor,
                       fontSize: 12,
