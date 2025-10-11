@@ -21,6 +21,7 @@ class SellerShop {
   final String openingTime;
   final String closingTime;
   final String category;
+  final int categoryId; // <-- ADD THIS
   final double rating;
   final String? description;
   final String sellerId;
@@ -35,6 +36,7 @@ class SellerShop {
     required this.openingTime,
     required this.closingTime,
     required this.category,
+    required this.categoryId, // <-- ADD THIS
     required this.rating,
     this.description,
     required this.sellerId,
@@ -63,7 +65,7 @@ factory SellerShop.fromJson(Map<String, dynamic> json) {
     
     // Corrected key to 'category' and kept the null-safe logic.
     category: json['category'] as String? ?? 'N/A', 
-
+    categoryId: json['category_id'] as int? ?? 0, // <-- ADD THIS with safe parsing
     // Safely handle numbers that could be int or double.
     rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
     

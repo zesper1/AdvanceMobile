@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:panot/models/notification_model.dart';
+import 'package:panot/models/shop_subcategory.dart';
 import 'package:panot/providers/notification_provider.dart';
 import 'package:panot/services/admin_services.dart';
 import 'package:panot/services/shop_services.dart';
@@ -95,6 +96,38 @@ class SellerShopNotifier extends AutoDisposeAsyncNotifier<List<SellerShop>> {
 
     notificationNotifier.addNotification(notification);
   }
+
+  // ADD THIS METHOD
+  Future<void> deleteShop(String shopId) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      await ref.read(shopServiceProvider).deleteShop(shopId);
+      // After deleting, refetch the list to update the UI
+      return build();
+    });
+  }
+  Future<void> updateBasicShopDetails({
+  required int shopId,
+  required String shopName,
+  required String description,
+  required TimeOfDay openingTime,
+  required TimeOfDay closingTime,
+  required int categoryId,
+}) async {
+  state = const AsyncValue.loading();
+  state = await AsyncValue.guard(() async {
+    await ref.read(shopServiceProvider).updateShopDetails(
+      shopId: shopId,
+      shopName: shopName,
+      description: description,
+      openingTime: openingTime,
+      closingTime: closingTime,
+      categoryId: categoryId,
+    );
+    return ref.read(shopServiceProvider).getSellerShops();
+  });
+}
+
 } // This brace correctly closes the SellerShopNotifier class.
 
 // The main provider for accessing the notifier and its state
@@ -122,5 +155,14 @@ final sellerPendingShopsProvider = Provider.autoDispose<AsyncValue<List<SellerSh
     (shops) => shops.where((shop) => shop.status == ShopStatus.Pending).toList(),
   );
 });
+/// A provider that fetches the list of subcategory names for a given shopId.
+// MODIFIED: This provider now returns a typed list
+// ✅ CORRECTED: The provider's return type is now List<ShopSubcategory>.
+final shopSubcategoriesProvider =
+    FutureProvider.autoDispose.family<List<ShopSubcategory>, int>((ref, shopId) {
+  // This correctly calls the service method that returns a Future<List<ShopSubcategory>>
+  return ref.watch(shopServiceProvider).getShopSubcategories(shopId);
+});
+
 
 // The extra closing brace that caused the error has been removed from here.

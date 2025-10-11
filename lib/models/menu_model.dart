@@ -6,8 +6,11 @@ class MenuItem {
   final double price;
   final String imageUrl;
   final int stock;
-  final String category;
+  final String? category; // Retain for backward compatibility
   final String stallId;
+  final bool isFavorite; // NEW: Add this field
+
+  final List<String> customCategories; // Add this field
 
   const MenuItem({
     required this.id,
@@ -16,8 +19,10 @@ class MenuItem {
     required this.price,
     required this.imageUrl,
     required this.stock,
-    required this.category,
+    this.category, // Make optional
     required this.stallId,
+    this.isFavorite = false, // Default to false
+    this.customCategories = const [], // Default to empty list
   });
 
   MenuItem copyWith({
@@ -29,6 +34,8 @@ class MenuItem {
     int? stock,
     String? category,
     String? stallId,
+    bool? isFavorite, // NEW: Add to copyWith
+    List<String>? customCategories,
   }) {
     return MenuItem(
       id: id ?? this.id,
@@ -37,8 +44,10 @@ class MenuItem {
       price: price ?? this.price,
       imageUrl: imageUrl ?? this.imageUrl,
       stock: stock ?? this.stock,
-      category: category ?? this.category,
+      category: category ?? this.category!,
       stallId: stallId ?? this.stallId,
+      isFavorite: isFavorite ?? this.isFavorite, // NEW: Assign in copyWith
+      customCategories: customCategories ?? this.customCategories,
     );
   }
 
@@ -50,8 +59,9 @@ class MenuItem {
       'price': price,
       'imageUrl': imageUrl,
       'stock': stock,
-      'category': category,
+
       'stallId': stallId,
+      'customCategories': customCategories, // Add to map
     };
   }
 
@@ -63,8 +73,10 @@ class MenuItem {
       price: (map['price'] ?? 0.0).toDouble(),
       imageUrl: map['imageUrl'] ?? '',
       stock: map['stock'] ?? 0,
-      category: map['category'] ?? '',
+
       stallId: map['stallId'] ?? '',
+      customCategories:
+          List<String>.from(map['customCategories'] ?? []), // Parse from map
     );
   }
 }
