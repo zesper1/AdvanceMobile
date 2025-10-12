@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:panot/providers/seller_shop_provider.dart';
 import '../../models/food_stall_model.dart';
-import '../../providers/food_stall_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../screens/user/menu_screen.dart';
 
@@ -9,30 +9,40 @@ class FoodStallCard extends ConsumerWidget {
   final FoodStall stall;
   final String cardType; // 'horizontal' or 'vertical'
   final bool showFavoriteButton;
+  
+  // ✅ 2. Changed to be nullable. It's no longer required.
+  final Set<int>? favoriteIds;
 
   const FoodStallCard({
     super.key,
     required this.stall,
     this.cardType = 'horizontal',
     this.showFavoriteButton = true,
+    this.favoriteIds, // Now an optional parameter
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Wrap the entire card with GestureDetector for navigation
+    // ✅ 3. Determine the live favorite status here, at the top level.
+    // If favoriteIds is provided (user is logged in), use it.
+    // Otherwise, fall back to the initial data from the `stall` model.
+    final bool isCurrentlyFavorite = favoriteIds?.contains(stall.id) ?? stall.isFavorite;
+
     return GestureDetector(
       onTap: () {
         _navigateToMenuScreen(context);
       },
-      child: _buildCardContent(context, ref),
+      // ✅ 4. Pass the calculated `isCurrentlyFavorite` status down to the builders.
+      child: _buildCardContent(context, ref, isCurrentlyFavorite),
     );
   }
 
-  Widget _buildCardContent(BuildContext context, WidgetRef ref) {
+  // Helper methods now accept `isCurrentlyFavorite` to avoid re-calculating it.
+  Widget _buildCardContent(BuildContext context, WidgetRef ref, bool isCurrentlyFavorite) {
     if (cardType == 'vertical') {
-      return _buildVerticalCard(context, ref);
+      return _buildVerticalCard(context, ref, isCurrentlyFavorite);
     } else {
-      return _buildHorizontalCard(context, ref);
+      return _buildHorizontalCard(context, ref, isCurrentlyFavorite);
     }
   }
 
@@ -45,26 +55,20 @@ class FoodStallCard extends ConsumerWidget {
     );
   }
 
-  // New method to show the animated success dialog
-  Future<void> _showFavoriteSuccessDialog(
-      BuildContext context, WidgetRef ref) async {
-    // Determine the action text before toggling
-    final isCurrentlyFavorite = stall.isFavorite;
+  Future<void> _showFavoriteSuccessDialog(BuildContext context, WidgetRef ref, bool isCurrentlyFavorite) async {
+    ref.read(shopServiceProvider).toggleFavoriteStatus(stall.id, isCurrentlyFavorite);
 
-    // 1. Toggle the favorite status
-    ref.read(foodStallProvider.notifier).toggleFavorite(stall.id);
-
-    // Only show dialog if adding to favorites
+    // The rest of your dialog logic is great and remains the same.
+    // It correctly only shows the dialog when adding a favorite.
     if (!isCurrentlyFavorite) {
       showGeneralDialog(
         context: context,
         barrierDismissible: true,
         barrierLabel: 'Dismiss',
         pageBuilder: (ctx, a1, a2) {
-          return Container();
+          return Container(); // Empty container
         },
         transitionBuilder: (context, a1, a2, child) {
-          // Simple scale and opacity transition for a "pop-up" effect
           return FadeTransition(
             opacity: a1,
             child: ScaleTransition(
@@ -75,11 +79,10 @@ class FoodStallCard extends ConsumerWidget {
                 contentPadding:
                     const EdgeInsets.symmetric(vertical: 20, horizontal: 32),
                 content: SizedBox(
-                  width: 320, // Increased width
+                  width: 320,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Animated Heart Icon
                       TweenAnimationBuilder<double>(
                         tween: Tween(begin: 0.0, end: 1.0),
                         duration: const Duration(milliseconds: 500),
@@ -96,7 +99,6 @@ class FoodStallCard extends ConsumerWidget {
                         },
                       ),
                       const SizedBox(height: 20),
-                      // Caption
                       const Text(
                         'Successfully Added to Favorites!',
                         style: TextStyle(
@@ -116,7 +118,6 @@ class FoodStallCard extends ConsumerWidget {
         transitionDuration: const Duration(milliseconds: 500),
       );
 
-      // Wait for the animation to play, then close the dialog automatically.
       await Future.delayed(const Duration(milliseconds: 800));
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
@@ -124,8 +125,12 @@ class FoodStallCard extends ConsumerWidget {
     }
   }
 
-  Widget _buildVerticalCard(BuildContext context, WidgetRef ref) {
+  // --- Card Layout Builders ---
+  // Pass `isCurrentlyFavorite` down to any widget that needs it.
+
+  Widget _buildVerticalCard(BuildContext context, WidgetRef ref, bool isCurrentlyFavorite) {
     return Container(
+      // ... (decoration is unchanged)
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -141,7 +146,6 @@ class FoodStallCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image section
           Stack(
             children: [
               ClipRRect(
@@ -171,11 +175,10 @@ class FoodStallCard extends ConsumerWidget {
                 Positioned(
                   top: 8,
                   right: 8,
-                  child: _buildFavoriteButton(context, ref),
+                  child: _buildFavoriteButton(context, ref, isCurrentlyFavorite), // Pass status
                 ),
             ],
           ),
-          // Details section
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: Column(
@@ -207,8 +210,9 @@ class FoodStallCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildHorizontalCard(BuildContext context, WidgetRef ref) {
+  Widget _buildHorizontalCard(BuildContext context, WidgetRef ref, bool isCurrentlyFavorite) {
     return Container(
+      // ... (decoration is unchanged)
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -225,16 +229,16 @@ class FoodStallCard extends ConsumerWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildImageWithOverlays(context, ref),
+          _buildImageWithOverlays(),
           Expanded(
-            child: _buildCardDetails(context, ref),
+            child: _buildCardDetails(context, ref, isCurrentlyFavorite), // Pass status
           ),
         ],
       ),
     );
   }
 
-  Widget _buildImageWithOverlays(BuildContext context, WidgetRef ref) {
+  Widget _buildImageWithOverlays() {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Stack(
@@ -265,7 +269,7 @@ class FoodStallCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildCardDetails(BuildContext context, WidgetRef ref) {
+  Widget _buildCardDetails(BuildContext context, WidgetRef ref, bool isCurrentlyFavorite) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Column(
@@ -285,7 +289,8 @@ class FoodStallCard extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              if (showFavoriteButton) _buildFavoriteButton(context, ref),
+              if (showFavoriteButton)
+                _buildFavoriteButton(context, ref, isCurrentlyFavorite), // Pass status
             ],
           ),
           const SizedBox(height: 4),
@@ -302,10 +307,10 @@ class FoodStallCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildFavoriteButton(BuildContext context, WidgetRef ref) {
+  Widget _buildFavoriteButton(BuildContext context, WidgetRef ref, bool isCurrentlyFavorite) {
     return GestureDetector(
       onTap: () async {
-        await _showFavoriteSuccessDialog(context, ref);
+        await _showFavoriteSuccessDialog(context, ref, isCurrentlyFavorite);
       },
       child: Container(
         padding: const EdgeInsets.all(4),
@@ -321,8 +326,9 @@ class FoodStallCard extends ConsumerWidget {
           ],
         ),
         child: Icon(
-          stall.isFavorite ? Icons.favorite : Icons.favorite_border,
-          color: stall.isFavorite ? Colors.redAccent : AppTheme.subtleTextColor,
+          // ✅ 6. Use the live status to determine the icon's appearance.
+          isCurrentlyFavorite ? Icons.favorite : Icons.favorite_border,
+          color: isCurrentlyFavorite ? Colors.redAccent : AppTheme.subtleTextColor,
           size: 16,
         ),
       ),
