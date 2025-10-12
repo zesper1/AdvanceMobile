@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 // Assuming these are all defined and correct
-import 'package:panot/providers/category_provider.dart';
 import 'package:panot/providers/product_provider.dart';
 import 'package:panot/providers/seller_shop_provider.dart';
 import 'package:panot/theme/app_theme.dart'; // Assuming AppTheme.primaryColor is available

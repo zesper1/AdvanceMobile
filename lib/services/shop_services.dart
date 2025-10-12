@@ -387,4 +387,27 @@ class ShopService {
       return [];
     }
   }
+
+  Future<void> updateShopAvailability({
+    required String shopId,
+    required String newStatus,
+  }) async {
+    // Get the Supabase client instance
+    final supabase = Supabase.instance.client;
+
+    try {
+      await supabase
+          .from(foodStallsTable) // 1. Select the 'shops' table
+          .update({
+            'availability_status': newStatus // 2. Set the new value for the column
+          })
+          .eq('shop_id', shopId); // 3. Specify which shop to update using its ID
+
+    } catch (error) {
+      // It's good practice to handle potential errors
+      print('Error updating shop status: $error');
+      // Re-throw the error to be handled by the calling UI code
+      rethrow;
+    }
+  }
 }

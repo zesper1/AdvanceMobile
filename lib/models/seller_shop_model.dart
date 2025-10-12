@@ -1,8 +1,9 @@
-// models/seller_shop_model.dart
+
+enum ShopAvailabilityStatus { Open, Closed, OnBreak }
 
 enum ShopStatus { Pending, Approved, Rejected }
 
-// Helper function to parse the enum safely
+// Helper function for ShopStatus
 ShopStatus _parseShopStatus(String status) {
   switch (status.toLowerCase()) {
     case 'approved':
@@ -14,6 +15,21 @@ ShopStatus _parseShopStatus(String status) {
   }
 }
 
+// 2. ADD HELPER FUNCTION for the new nullable availability status
+ShopAvailabilityStatus? _parseAvailabilityStatus(String? status) {
+  if (status == null) return null; // Return null if the value from DB is null
+  switch (status.toLowerCase()) {
+    case 'open':
+      return ShopAvailabilityStatus.Open;
+    case 'closed':
+      return ShopAvailabilityStatus.Closed;
+    case 'onbreak':
+      return ShopAvailabilityStatus.OnBreak;
+    default:
+      return null; // Return null for any other unexpected value
+  }
+}
+
 class SellerShop {
   final String id;
   final String name;
@@ -21,13 +37,15 @@ class SellerShop {
   final String openingTime;
   final String closingTime;
   final String category;
-  final int categoryId; // <-- added
+  final int categoryId;
   final double rating;
   final String? description;
   final String sellerId;
   final ShopStatus status;
   final List<String> customCategories;
   final DateTime createdAt;
+  // 3. ADD THE NEW NULLABLE PROPERTY
+  final ShopAvailabilityStatus? availabilityStatus;
 
   SellerShop({
     required this.id,
@@ -36,13 +54,14 @@ class SellerShop {
     required this.openingTime,
     required this.closingTime,
     required this.category,
-    required this.categoryId, // <-- added
+    required this.categoryId,
     required this.rating,
     this.description,
     required this.sellerId,
     this.status = ShopStatus.Pending,
     this.customCategories = const [],
     required this.createdAt,
+    this.availabilityStatus, // Added to constructor
   });
 
   SellerShop copyWith({
@@ -59,6 +78,7 @@ class SellerShop {
     ShopStatus? status,
     List<String>? customCategories,
     DateTime? createdAt,
+    ShopAvailabilityStatus? availabilityStatus, // Added to copyWith
   }) {
     return SellerShop(
       id: id ?? this.id,
@@ -74,6 +94,8 @@ class SellerShop {
       status: status ?? this.status,
       customCategories: customCategories ?? this.customCategories,
       createdAt: createdAt ?? this.createdAt,
+      // Handle the new property in copyWith
+      availabilityStatus: availabilityStatus ?? this.availabilityStatus,
     );
   }
 
@@ -109,6 +131,10 @@ class SellerShop {
 
       // Enum parsing
       status: _parseShopStatus(json['status'] as String? ?? 'pending'),
+
+      // 4. FETCH AND PARSE the new nullable status from JSON
+      availabilityStatus:
+          _parseAvailabilityStatus(json['availability_status'] as String?),
 
       // Custom categories list
       customCategories: List<String>.from(json['custom_categories'] ?? []),
