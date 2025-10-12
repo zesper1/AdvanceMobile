@@ -115,7 +115,7 @@ class ShopService {
   }
 
   /// Updates an existing shop and handles optional image replacement.
-  Future<void> updateShop({
+    Future<void> updateShop({
     required String shopId,
     required String shopName,
     required String description,
@@ -130,33 +130,32 @@ class ShopService {
       final sellerId = _supabase.auth.currentUser?.id;
       if (sellerId == null) throw Exception('User is not authenticated.');
 
-      String? imageUrlForUpdate = existingImageUrl;
+      String? newPublicUrl;
       const bucket = 'shop_image';
 
-      // Upload new image if provided
+      // 1. Handle image upload and get the new URL if a new file is provided
       if (newImageFile != null) {
         final fileExtension = path.extension(newImageFile.name);
         final newStoragePath =
             '/$sellerId/logo_${DateTime.now().millisecondsSinceEpoch}$fileExtension';
 
+        // ... (your existing kIsWeb/else block for uploading)
         if (kIsWeb) {
           final imageBytes = await newImageFile.readAsBytes();
           await _supabase.storage.from(bucket).uploadBinary(
                 newStoragePath,
                 imageBytes,
-                fileOptions:
-                    const FileOptions(cacheControl: '3600', upsert: false),
+                fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
               );
         } else {
           await _supabase.storage.from(bucket).upload(
                 newStoragePath,
                 File(newImageFile.path),
-                fileOptions:
-                    const FileOptions(cacheControl: '3600', upsert: false),
+                fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
               );
         }
 
-        imageUrlForUpdate =
+        newPublicUrl =
             _supabase.storage.from(bucket).getPublicUrl(newStoragePath);
 
         // Delete old image if it exists
@@ -168,7 +167,7 @@ class ShopService {
         }
       }
 
-      // Prepare params
+      // 2. Prepare the base parameters (without the image URL)
       final openingTimeStr =
           '${openingTime.hour.toString().padLeft(2, '0')}:${openingTime.minute.toString().padLeft(2, '0')}:00';
       final closingTimeStr =
@@ -178,14 +177,20 @@ class ShopService {
         'p_shop_id': int.parse(shopId),
         'p_name': shopName,
         'p_description': description,
-        'p_image_url': imageUrlForUpdate,
         'p_opening_time': openingTimeStr,
         'p_closing_time': closingTimeStr,
         'p_category_id': categoryId,
         'p_subcategory_ids': subcategoryIds,
       };
 
+      // ✅ 3. Conditionally add the image URL parameter ONLY if a new image was uploaded
+      if (newPublicUrl != null) {
+        params['p_image_url'] = newPublicUrl;
+      }
+
+      // 4. Call the RPC with the final parameters
       await _supabase.rpc('update_shop_with_subcategories', params: params);
+
     } on StorageException catch (e) {
       debugPrint('Storage Error updating shop: ${e.message}');
       rethrow;
