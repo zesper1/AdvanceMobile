@@ -36,36 +36,49 @@ class FoodStall {
     required this.closingTime,
     required this.category,
     required this.rating,
-    this.isFavorite = false,
+    this.isFavorite = true,
     this.description = '',
     this.customCategories = const [],
     this.isOpen = false,
     this.location = '',
   });
 
-  // Factory constructor for parsing the Supabase Map data
   factory FoodStall.fromMap(Map<String, dynamic> map) {
-    // Parse the custom_categories JSON array string
-    final customCategoriesString = map['custom_categories'] as String? ?? '[]';
-    final List<String> categories = (jsonDecode(customCategoriesString) as List?)
-        ?.map((e) => e.toString())
-        .toList() ?? [];
+  // ✅ More robust parsing for custom_categories
+  List<String> parsedCustomCategories = [];
+  final customCategoriesData = map['custom_categories'];
 
-    // Parse time to HH:MM format for display
-    String formatTime(String time) => time.split(':').take(2).join(':');
+  if (customCategoriesData is List) {
+    // Handles the case where the data is already a list (e.g., from a direct RPC call).
+    parsedCustomCategories = List<String>.from(customCategoriesData.map((item) => item.toString()));
+  } else if (customCategoriesData is String && customCategoriesData.isNotEmpty) {
+    // Handles the case where the data is a JSON string.
+    try {
+      final decodedList = jsonDecode(customCategoriesData) as List;
+      parsedCustomCategories = List<String>.from(decodedList.map((item) => item.toString()));
+    } catch (e) {
+      // If parsing fails, default to an empty list.
+      parsedCustomCategories = [];
+    }
+  }
 
-    return FoodStall(
-      id: map['shop_id'] as int,
-      name: map['shop_name'] as String,
-      imageUrl: map['logo_url'] as String? ?? '',
-      description: map['description'] as String? ?? '',
-      availability: AvailabilityStatus.fromString(map['availability_status'] as String),
-      openingTime: formatTime(map['opening_time'] as String),
-      closingTime: formatTime(map['closing_time'] as String),
-      category: map['category_name'] as String? ?? 'N/A',
-      rating: double.tryParse(map['rating'].toString()) ?? 0.0,
-      isFavorite: map['is_favorite'] as bool? ?? false, // Assumed to be joined
-      customCategories: categories,
+  // Parse time to HH:MM format for display
+  String formatTime(String time) => time.split(':').take(2).join(':');
+
+  return FoodStall(
+    id: (map['shop_id'] ?? map['id']) as int,
+    name: (map['shop_name'] ?? map['name']) as String,
+    imageUrl: (map['logo_url'] ?? map['image_url']) as String? ?? '',
+    description: map['description'] as String? ?? '',
+    availability: AvailabilityStatus.fromString(
+        (map['availability_status'] ?? map['availability']) as String
+    ),
+    openingTime: formatTime(map['opening_time'] as String),
+    closingTime: formatTime(map['closing_time'] as String),
+    category: (map['category_name'] ?? map['category']) as String? ?? 'N/A',
+    rating: double.tryParse(map['rating'].toString()) ?? 0.0,
+    isFavorite: map['is_favorite'] as bool? ?? false,
+    customCategories: parsedCustomCategories,
     );
   }
 

@@ -10,6 +10,7 @@ import '../models/seller_shop_model.dart';
 
 class ShopService {
   final _supabase = Supabase.instance.client;
+  final String _favoritesTable = 'user_favorite_shops'; 
 
   /// Creates a new shop by first uploading a logo and then calling an RPC.
   /// This method is platform-aware and handles uploads for both mobile and web.
@@ -310,36 +311,105 @@ class ShopService {
     }
   }
 
-  // NOTE: This service function handles the Supabase query.
   Future<List<FoodStall>> fetchAllStalls() async {
-    // Replace with your actual Supabase query
-    final List<Map<String, dynamic>> response = await _supabase
-        .from('shops')
-        .select('*, shop_categories(category_name)') // JOIN with categories
-        // You would typically join a user_favorites table here to get 'is_favorite'
-        .order('rating', ascending: false);
+    try {
+      final List<Map<String, dynamic>> response = await _supabase
+          .from('food_stalls_view')
+          .select()
+          // ✅ Add this line to filter for approved shops at the database level.
+          .eq('status', 'approved') 
+          .order('rating', ascending: false);
 
-    // Map the raw List<Map> to List<FoodStall> using the factory constructor
-    return response.map((map) {
-      // Flatten the category name from the joined object
-      final categoryName = map['shop_categories'] != null 
-          ? (map['shop_categories'] as Map<String, dynamic>)['category_name'] 
-          : 'N/A';
-      
-      // Merge the category name into the top-level map for the model parser
-      final flatMap = {...map, 'category_name': categoryName};
-      
-      return FoodStall.fromMap(flatMap);
-    }).toList();
+      return response.map((map) => FoodStall.fromMap(map)).toList();
+
+    } catch (e) {
+      print('Error fetching stalls from view: $e');
+      return [];
+    }
   }
 
-  // Service function to update favorite status in the database
-  // This would typically insert/delete a row in a 'user_favorites' table
+  Stream<List<int>> getFavoriteShopIdsStream() {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) {
+      // If the user is not logged in, return an empty stream.
+      return Stream.value([]);
+    }
+
+    return _supabase
+        .from(_favoritesTable)
+        // 1. IMPORTANT: Define the composite primary key for the stream to work.
+        .stream(primaryKey: ['user_id', 'shop_id'])
+        // 2. Filter the stream to only get updates for the current user.
+        .eq('user_id', userId)
+        .map((listOfMaps) {
+          // 3. Transform the raw data (List<Map<String, dynamic>>)
+          //    into a simple list of shop IDs (List<int>).
+          return listOfMaps.map((map) => map['shop_id'] as int).toList();
+        });
+  }
+
   Future<void> toggleFavoriteStatus(int stallId, bool isFavorite) async {
-    // Implement your Supabase RLS logic here to update the user's favorites table.
-    // Since we don't have the table definition, this is a placeholder.
-    await Future.delayed(const Duration(milliseconds: 300));
-    print('DB Action: Set stall $stallId favorite to $isFavorite');
+    final userId = _supabase.auth.currentUser?.id;
+
+    if (userId == null) {
+      // Handle the case where the user is not logged in (e.g., show a toast/login prompt)
+      throw Exception('User must be logged in to modify favorites.');
+    }
+
+    try {
+      if (isFavorite) {
+        await _supabase
+            .from(_favoritesTable)
+            .delete()
+            .eq('user_id', userId) // Filter by the user's UUID
+            .eq('shop_id', stallId); // Filter by the shop ID
+
+        print('DB Action: Stall $stallId unfavorited successfully.');
+      } else {
+        // 💖 FAVORITE: INSERT a new entry into the junction table
+        await _supabase.from(_favoritesTable).insert({
+          'user_id': userId,
+          'shop_id': stallId,
+        });
+
+        print('DB Action: Stall $stallId favorited successfully.');
+      }
+    } on PostgrestException catch (e) {
+      // Supabase errors (e.g., RLS violation, network error, unique key violation)
+      print('Supabase Error toggling favorite: ${e.message}');
+      rethrow;
+    } catch (e) {
+      // General errors
+      print('Error toggling favorite status: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<FoodStall>> fetchAllStallsWithFavoriteStatus() async {
+    final userId = _supabase.auth.currentUser?.id;
+
+    try {
+      // 1. Call your existing Postgres function using .rpc()
+      final List<dynamic> data = await _supabase.rpc(
+        // 🚨 Using your existing function name
+        'get_food_stalls', 
+        params: {
+          // 2. Pass the user's ID to the function as 'p_user_id'
+          'p_user_id': userId,
+        },
+      );
+      print('Fetched ${data}');
+      // 3. Map the results, which now include the 'is_favorite' boolean,
+      //    directly to your FoodStall model.
+      return data
+          .map((map) => FoodStall.fromMap(map as Map<String, dynamic>))
+          .toList();
+          
+    } catch (e) {
+      print('Error fetching food stalls via RPC: $e');
+      // Log the error and return an empty list or handle the error appropriately
+      return [];
+    }
   }
 }
 

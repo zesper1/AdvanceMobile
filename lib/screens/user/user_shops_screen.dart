@@ -42,6 +42,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final favoriteShopsAsync = ref.watch(favoriteShopsProvider);
     final openShopsAsync = ref.watch(currentlyOpenShopsProvider);
 
+    final favoriteIdsAsync = ref.watch(favoriteShopIdsStreamProvider);
+
+
     // Watch the user profile (already correctly handling AsyncValue)
     final userProfile = ref.watch(authNotifierProvider);
     final firstName = userProfile.when(
@@ -74,6 +77,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             
         // Ensure the categoryShops are resolved to a synchronous list for use below.
         final categoryShopsList = categoryShopsAsync.value ?? [];
+        final favoriteIdsSet = favoriteIdsAsync.value?.toSet() ?? <int>{};
 
 
         Widget welcomeSection = Container(
@@ -142,25 +146,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               popularShopsAsync.when(
                 loading: () => _buildSectionPlaceholder('Popular Shops'),
                 error: (_, __) => const SizedBox.shrink(),
-                data: (stalls) => _buildStallSection('Popular Shops', stalls, isHorizontal: true, cardType: 'vertical'),
+                data: (stalls) => _buildStallSection('Popular Shops', stalls, isHorizontal: true, cardType: 'vertical', favoriteIds: favoriteIdsSet),
               ),
               
               // Favorites Section
               favoriteShopsAsync.when(
                 loading: () => _buildSectionPlaceholder('Favorites'),
                 error: (_, __) => const SizedBox.shrink(),
-                data: (stalls) => _buildStallSection('Favorites', stalls, isHorizontal: true, cardType: 'vertical'),
+                data: (stalls) => _buildStallSection('Favorites', stalls, isHorizontal: true, cardType: 'vertical', favoriteIds: favoriteIdsSet),
               ),
 
               // Currently Open Section
               openShopsAsync.when(
                 loading: () => _buildSectionPlaceholder('Currently Open'),
                 error: (_, __) => const SizedBox.shrink(),
-                data: (stalls) => _buildStallSection('Currently Open', stalls, isHorizontal: false, cardType: 'horizontal'),
+                data: (stalls) => _buildStallSection('Currently Open', stalls, isHorizontal: false, cardType: 'horizontal', favoriteIds: favoriteIdsSet),
               ),
 
               // Category Section (uses the synchronous list derived earlier)
-              _buildCategorySection(categories, categoryShopsList),
+              _buildCategorySection(categories, categoryShopsList, favoriteIdsSet),
               
               const SizedBox(height: 80),
             ],
@@ -365,7 +369,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
   
   // ... rest of the file is unchanged ...
-  Widget _buildStallSection(String title, List<FoodStall> stalls, {required bool isHorizontal, required String cardType}) {
+  // ✅ 4. Update method signatures to accept the `favoriteIds` set.
+  Widget _buildStallSection(String title, List<FoodStall> stalls,
+      {required bool isHorizontal,
+      required String cardType,
+      required Set<int> favoriteIds}) { // <-- ADDED
     if (stalls.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -379,22 +387,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: Text(
               title,
               style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textColor,
-              ),
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textColor),
             ),
           ),
           const SizedBox(height: 12),
-          isHorizontal 
-            ? _buildHorizontalStallList(stalls, cardType: cardType)
-            : _buildVerticalStallList(stalls, cardType: cardType),
+          isHorizontal
+              ? _buildHorizontalStallList(stalls, cardType: cardType, favoriteIds: favoriteIds) // <-- PASS DOWN
+              : _buildVerticalStallList(stalls, cardType: cardType, favoriteIds: favoriteIds), // <-- PASS DOWN
         ],
       ),
     );
   }
-  
-  Widget _buildHorizontalStallList(List<FoodStall> stalls, {required String cardType}) {
+
+  Widget _buildHorizontalStallList(List<FoodStall> stalls,
+      {required String cardType, required Set<int> favoriteIds}) { // <-- ADDED
     final screenWidth = MediaQuery.of(context).size.width;
     final cardWidth = cardType == 'vertical' ? screenWidth * 0.65 : screenWidth * 0.75;
     final cardHeight = cardType == 'vertical' ? 240.0 : 160.0;
@@ -412,6 +420,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: FoodStallCard(
               stall: stalls[index],
               cardType: cardType,
+              favoriteIds: favoriteIds, // ✅ 5. PASS TO THE CARD
             ),
           );
         },
@@ -419,22 +428,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildVerticalStallList(List<FoodStall> stalls, {required String cardType}) {
+  Widget _buildVerticalStallList(List<FoodStall> stalls,
+      {required String cardType, required Set<int> favoriteIds}) { // <-- ADDED
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
-        children: stalls.map((stall) => Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: FoodStallCard(
-            stall: stall,
-            cardType: cardType,
-          ),
-        )).toList(),
+        children: stalls
+            .map((stall) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: FoodStallCard(
+                    stall: stall,
+                    cardType: cardType,
+                    favoriteIds: favoriteIds, // ✅ 5. PASS TO THE CARD
+                  ),
+                ))
+            .toList(),
       ),
     );
   }
 
-  Widget _buildCategorySection(List<String> categories, List<FoodStall> stalls) {
+  Widget _buildCategorySection(
+      List<String> categories, List<FoodStall> stalls, Set<int> favoriteIds) { // <-- ADDED
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
@@ -447,10 +461,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 const Text(
                   'By Category',
                   style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textColor,
-                  ),
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textColor),
                 ),
                 const SizedBox(width: 16),
                 Container(
@@ -458,12 +471,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppTheme.subtleTextColor.withOpacity(0.3)),
+                    border: Border.all(
+                        color: AppTheme.subtleTextColor.withOpacity(0.3)),
                   ),
                   child: DropdownButton<String>(
                     value: _selectedCategory,
                     underline: const SizedBox(),
-                    icon: const Icon(Icons.arrow_drop_down, color: AppTheme.textColor),
+                    icon: const Icon(Icons.arrow_drop_down,
+                        color: AppTheme.textColor),
                     items: categories.map((String category) {
                       return DropdownMenuItem<String>(
                         value: category,
@@ -484,7 +499,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          _buildVerticalStallList(stalls, cardType: 'horizontal'),
+          _buildVerticalStallList(stalls, cardType: 'horizontal', favoriteIds: favoriteIds), // <-- PASS DOWN
         ],
       ),
     );
