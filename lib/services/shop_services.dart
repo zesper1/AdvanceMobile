@@ -3,15 +3,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:panot/models/food_stall_model.dart';
+import 'package:panot/models/shop_review_model.dart';
 import 'package:panot/models/shop_subcategory.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:path/path.dart' as path;
 import '../models/seller_shop_model.dart';
+import '../constants/database.dart';
 
 class ShopService {
   final _supabase = Supabase.instance.client;
-  final String _favoritesTable = 'user_favorite_shops'; 
-
   /// Creates a new shop by first uploading a logo and then calling an RPC.
   /// This method is platform-aware and handles uploads for both mobile and web.
   Future<int> createShop({
@@ -336,7 +336,7 @@ class ShopService {
     }
 
     return _supabase
-        .from(_favoritesTable)
+        .from(userFavoritesTable)
         // 1. IMPORTANT: Define the composite primary key for the stream to work.
         .stream(primaryKey: ['user_id', 'shop_id'])
         // 2. Filter the stream to only get updates for the current user.
@@ -359,7 +359,7 @@ class ShopService {
     try {
       if (isFavorite) {
         await _supabase
-            .from(_favoritesTable)
+            .from(userFavoritesTable)
             .delete()
             .eq('user_id', userId) // Filter by the user's UUID
             .eq('shop_id', stallId); // Filter by the shop ID
@@ -367,7 +367,7 @@ class ShopService {
         print('DB Action: Stall $stallId unfavorited successfully.');
       } else {
         // 💖 FAVORITE: INSERT a new entry into the junction table
-        await _supabase.from(_favoritesTable).insert({
+        await _supabase.from(userFavoritesTable).insert({
           'user_id': userId,
           'shop_id': stallId,
         });
@@ -408,6 +408,47 @@ class ShopService {
     } catch (e) {
       print('Error fetching food stalls via RPC: $e');
       // Log the error and return an empty list or handle the error appropriately
+      return [];
+    }
+  }
+
+  Future<void> submitReview({
+    required int shopId,
+    required int rating, // The database expects an integer
+    String? comment,
+  }) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) {
+      throw Exception('User is not authenticated. Cannot submit review.');
+    }
+
+    try {
+      await _supabase.from(shopReviewsTable).insert({
+        'shop_id': shopId,
+        'student_user_id': userId,
+        'rating': rating,
+        'comment': comment, // Supabase handles null values correctly
+      });
+    } on PostgrestException catch (e) {
+      // Handle potential database errors, like violating a policy
+      print('Database error submitting review: ${e.message}');
+      rethrow;
+    } catch (e) {
+      print('An unexpected error occurred: $e');
+      rethrow;
+    }
+  }
+  Future<List<ShopReview>> fetchReviewsForShop(int shopId) async {
+    try {
+      final response = await _supabase
+          .from(shopReviewsTable)
+          .select()
+          .eq('shop_id', shopId)
+          .order('created_at', ascending: false); // Show newest first
+
+      return response.map((map) => ShopReview.fromMap(map)).toList();
+    } catch (e) {
+      print('Error fetching reviews for shop $shopId: $e');
       return [];
     }
   }
