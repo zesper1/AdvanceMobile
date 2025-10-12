@@ -85,4 +85,18 @@ class AuthNotifier extends _$AuthNotifier {
     await ref.read(authServiceProvider).signOut();
     state = const AsyncValue.data(null);
   }
+
+   // NEW: Method to send the password reset link
+  Future<void> sendPasswordResetEmail(String email) async {
+    // We don't need to manage state here, just call the service.
+    // The UI will show a confirmation message.
+    await ref.read(authServiceProvider).sendPasswordResetEmail(email);
+  }
+
+  // NEW: Method to update the user's password after they've clicked the link
+  Future<void> updateUserPassword(String newPassword) async {
+    await ref.read(supabaseClientProvider).auth.updateUser(
+      UserAttributes(password: newPassword),
+    );
+  }
 }
