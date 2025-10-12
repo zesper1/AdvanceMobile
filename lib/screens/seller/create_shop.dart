@@ -5,7 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../models/seller_shop_model.dart';
 import '../../providers/seller_shop_provider.dart';
-import '../../models/category_model.dart' as categ; // Import your Category and Subcategory models
+import '../../models/category_model.dart'
+    as categ; // Import your Category and Subcategory models
 import '../../providers/category_provider.dart'; // Import your category providers
 
 class CreateShopScreen extends ConsumerStatefulWidget {
@@ -49,12 +50,15 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
 
       TimeOfDay parseTime(String time) {
         final parts = time.split(':');
-        return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+        return TimeOfDay(
+            hour: int.parse(parts[0]), minute: int.parse(parts[1]));
       }
+
       _openingTime = parseTime(shop.openingTime);
       _closingTime = parseTime(shop.closingTime);
     }
   }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -64,8 +68,10 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
         categoriesAsync.whenData((categories) {
           if (categories.isNotEmpty) {
             try {
-              final preselectedCategory = categories.firstWhere((c) => c.name == widget.shopToUpdate!.category);
-              final preselectedSubcategoriesFuture = ref.watch(subcategoriesProvider(preselectedCategory.id));
+              final preselectedCategory = categories
+                  .firstWhere((c) => c.name == widget.shopToUpdate!.category);
+              final preselectedSubcategoriesFuture =
+                  ref.watch(subcategoriesProvider(preselectedCategory.id));
 
               preselectedSubcategoriesFuture.whenData((subcategories) {
                 final List<categ.Subcategory> preselectedSubs = [];
@@ -77,7 +83,7 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
                 }
                 // Update state after build
                 WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if(mounted) {
+                  if (mounted) {
                     setState(() {
                       _selectedMainCategory = preselectedCategory;
                       _selectedSubcategories = preselectedSubs;
@@ -85,13 +91,14 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
                   }
                 });
               });
-            } catch (_) { /* Category not found, do nothing */ }
+            } catch (_) {/* Category not found, do nothing */}
           }
         });
       }
       _isInit = false;
     }
   }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -125,96 +132,111 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
     }
   }
 
-Future<void> _submitForm() async {
-  if (!_formKey.currentState!.validate()) {
-    return;
-  }
-  if (_selectedMainCategory == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Please select a main category.'), backgroundColor: Colors.red),
-    );
-    return;
-  }
-  if (_selectedSubcategories.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Please select at least one subcategory.'), backgroundColor: Colors.red),
-    );
-    return;
-  }
-
-  if (_pickedImage == null && _existingImageUrl == null && !_isUpdateMode) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Please select a shop image.'), backgroundColor: Colors.red),
-    );
-    return;
-  }
-
-  setState(() => _isLoading = true);
-
-  try {
-    if (_isUpdateMode) {
-      // --- UPDATE LOGIC ---
-
-      // Create a list of subcategory IDs to send for the update.
-      final List<int> subcategoryIdsToSubmit = _selectedSubcategories.map((e) => e.id).toList();
-      print(subcategoryIdsToSubmit);
-      await ref.read(sellerShopProvider.notifier).updateShop(
-            shopId: widget.shopToUpdate!.id,
-            shopName: _nameController.text,
-            description: _descriptionController.text,
-            newImageFile: _pickedImage ?? 
-              (widget.shopToUpdate!.imageUrl == null ? _pickedImage : null),
-            openingTime: _openingTime,
-            closingTime: _closingTime,
-            categoryId: _selectedMainCategory!.id, // CORRECTED: Pass the integer ID
-            subcategoryIds: subcategoryIdsToSubmit, // CORRECTED: Pass the list of integer IDs
-          );
-    } else {
-      // --- CREATE LOGIC ---
-
-      // For creation, the RPC is smart enough to look up names.
-      final List<int> subcategoryIdsToSubmit = _selectedSubcategories.map((e) => e.id).toList();
-
-      await ref.read(sellerShopProvider.notifier).addShop(
-            shopName: _nameController.text,
-            description: _descriptionController.text,
-            imageFile: _pickedImage!,
-            openingTime: _openingTime,
-            closingTime: _closingTime,
-            categoryName: _selectedMainCategory!.id, // CORRECTED: Pass the string name
-            subcategoryNames: subcategoryIdsToSubmit, // This remains a list of names for 'create'
-          );
+  Future<void> _submitForm() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
     }
-    
-    final state = ref.read(sellerShopProvider);
-    if (state.hasError) {
-      throw state.error!;
-    }
-
-    if (mounted) {
+    if (_selectedMainCategory == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_isUpdateMode ? 'Shop updated successfully!' : 'Shop created successfully!'),
-          backgroundColor: Colors.green,
-        ),
+        const SnackBar(
+            content: Text('Please select a main category.'),
+            backgroundColor: Colors.red),
       );
-      Navigator.pop(context);
+      return;
     }
-  } catch (e) {
-    if (mounted) {
+    if (_selectedSubcategories.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to ${_isUpdateMode ? 'update' : 'create'} shop: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
+        const SnackBar(
+            content: Text('Please select at least one subcategory.'),
+            backgroundColor: Colors.red),
       );
+      return;
     }
-  } finally {
-    if (mounted) {
-      setState(() => _isLoading = false);
+
+    if (_pickedImage == null && _existingImageUrl == null && !_isUpdateMode) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Please select a shop image.'),
+            backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      if (_isUpdateMode) {
+        // --- UPDATE LOGIC ---
+
+        // Create a list of subcategory IDs to send for the update.
+        final List<int> subcategoryIdsToSubmit =
+            _selectedSubcategories.map((e) => e.id).toList();
+        print(subcategoryIdsToSubmit);
+        await ref.read(sellerShopProvider.notifier).updateShop(
+              shopId: widget.shopToUpdate!.id,
+              shopName: _nameController.text,
+              description: _descriptionController.text,
+              newImageFile: _pickedImage ??
+                  (widget.shopToUpdate!.imageUrl == null ? _pickedImage : null),
+              openingTime: _openingTime,
+              closingTime: _closingTime,
+              categoryId:
+                  _selectedMainCategory!.id, // CORRECTED: Pass the integer ID
+              subcategoryIds:
+                  subcategoryIdsToSubmit, // CORRECTED: Pass the list of integer IDs
+            );
+      } else {
+        // --- CREATE LOGIC ---
+
+        // For creation, the RPC is smart enough to look up names.
+        final List<int> subcategoryIdsToSubmit =
+            _selectedSubcategories.map((e) => e.id).toList();
+
+        await ref.read(sellerShopProvider.notifier).addShop(
+              shopName: _nameController.text,
+              description: _descriptionController.text,
+              imageFile: _pickedImage!,
+              openingTime: _openingTime,
+              closingTime: _closingTime,
+              categoryName:
+                  _selectedMainCategory!.id, // CORRECTED: Pass the string name
+              subcategoryNames:
+                  subcategoryIdsToSubmit, // This remains a list of names for 'create'
+            );
+      }
+
+      final state = ref.read(sellerShopProvider);
+      if (state.hasError) {
+        throw state.error!;
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_isUpdateMode
+                ? 'Shop updated successfully!'
+                : 'Shop created successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Failed to ${_isUpdateMode ? 'update' : 'create'} shop: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -222,10 +244,82 @@ Future<void> _submitForm() async {
     final categoriesAsyncValue = ref.watch(categoriesProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isUpdateMode ? 'Update Shop' : 'Create New Shop'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(50.0),
+        child: AppBar(
+          automaticallyImplyLeading: false,
+          elevation: 4.0,
+          backgroundColor:
+              Theme.of(context).colorScheme.primary.withOpacity(0.95),
+          flexibleSpace: Stack(
+            fit: StackFit.expand,
+            children: [
+              // ✅ Background image
+              Container(
+                decoration: const BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage('assets/NU-Dine.png'),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+
+              // ✅ Semi-transparent overlay
+              Container(
+                color: Colors.black.withOpacity(0.3),
+              ),
+
+              // ✅ Title + Back button
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      // ✅ Floating circular back button
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.arrow_back,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 22,
+                          ),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          _isUpdateMode ? 'Update Shop' : 'Create New Shop',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 17,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(
+                          width: 48), // to balance layout with back button
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -269,12 +363,15 @@ Future<void> _submitForm() async {
               const SizedBox(height: 24),
 
               // --- MAIN CATEGORY DROPDOWN ---
-              Text('Main Category', style: Theme.of(context).textTheme.titleMedium),
+              Text('Main Category',
+                  style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               categoriesAsyncValue.when(
                 data: (categories) {
                   // Safely set the default for create mode ONLY if it hasn't been set yet.
-                  if (!_isUpdateMode && _selectedMainCategory == null && categories.isNotEmpty) {
+                  if (!_isUpdateMode &&
+                      _selectedMainCategory == null &&
+                      categories.isNotEmpty) {
                     // This schedules the state update for after the build is complete.
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (mounted) {
@@ -286,11 +383,13 @@ Future<void> _submitForm() async {
                   }
 
                   if (categories.isEmpty) {
-                    return const Text('No categories available. Please add some in the database.');
+                    return const Text(
+                        'No categories available. Please add some in the database.');
                   }
 
                   return DropdownButtonFormField<categ.Category>(
-                    value: _selectedMainCategory, // No "!" needed, the value can be null.
+                    value:
+                        _selectedMainCategory, // No "!" needed, the value can be null.
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
                       labelText: 'Select Main Category',
@@ -304,10 +403,12 @@ Future<void> _submitForm() async {
                     onChanged: (categ.Category? newValue) {
                       setState(() {
                         _selectedMainCategory = newValue;
-                        _selectedSubcategories = []; // Clear subcategories when main category changes
+                        _selectedSubcategories =
+                            []; // Clear subcategories when main category changes
                       });
                     },
-                    validator: (value) => value == null ? 'Please select a main category.' : null,
+                    validator: (value) =>
+                        value == null ? 'Please select a main category.' : null,
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -316,22 +417,28 @@ Future<void> _submitForm() async {
               const SizedBox(height: 24),
 
               // --- SUBCATEGORY SELECTION ---
-              Text('Subcategories', style: Theme.of(context).textTheme.titleMedium),
+              Text('Subcategories',
+                  style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               if (_selectedMainCategory == null)
-                const Text('Please select a main category to see subcategories.')
+                const Text(
+                    'Please select a main category to see subcategories.')
               else
                 // If a main category is selected, watch and display the subcategories.
-                ref.watch(subcategoriesProvider(_selectedMainCategory!.id)).when(
+                ref
+                    .watch(subcategoriesProvider(_selectedMainCategory!.id))
+                    .when(
                       data: (subcategories) {
                         if (subcategories.isEmpty) {
-                          return const Text('No subcategories found for this category.');
+                          return const Text(
+                              'No subcategories found for this category.');
                         }
                         return Wrap(
                           spacing: 8.0,
                           runSpacing: 4.0,
                           children: subcategories.map((sub) {
-                            final isSelected = _selectedSubcategories.any((s) => s.id == sub.id);
+                            final isSelected = _selectedSubcategories
+                                .any((s) => s.id == sub.id);
                             return FilterChip(
                               label: Text(sub.name),
                               selected: isSelected,
@@ -340,7 +447,8 @@ Future<void> _submitForm() async {
                                   if (selected) {
                                     _selectedSubcategories.add(sub);
                                   } else {
-                                    _selectedSubcategories.removeWhere((s) => s.id == sub.id);
+                                    _selectedSubcategories
+                                        .removeWhere((s) => s.id == sub.id);
                                   }
                                 });
                               },
@@ -348,8 +456,10 @@ Future<void> _submitForm() async {
                           }).toList(),
                         );
                       },
-                      loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (err, stack) => Text('Error loading subcategories: $err'),
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (err, stack) =>
+                          Text('Error loading subcategories: $err'),
                     ),
               const SizedBox(height: 32),
 
@@ -401,7 +511,8 @@ Future<void> _submitForm() async {
                   if (_pickedImage != null)
                     kIsWeb
                         ? Image.network(_pickedImage!.path, fit: BoxFit.cover)
-                        : Image.file(File(_pickedImage!.path), fit: BoxFit.cover)
+                        : Image.file(File(_pickedImage!.path),
+                            fit: BoxFit.cover)
                   else if (_existingImageUrl != null)
                     Image.network(_existingImageUrl!, fit: BoxFit.cover)
                   else

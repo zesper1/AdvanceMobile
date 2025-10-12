@@ -7,7 +7,8 @@ import '../../models/product_model.dart';
 import '../../providers/food_stall_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/stalls/rate_stall_dialog.dart';
+import '../../widgets/userwidgets/rate_stall_dialog.dart';
+import '../../widgets/userwidgets/user_review_tab.dart';
 
 class StallMenuScreen extends ConsumerStatefulWidget {
   final FoodStall stall;
@@ -25,6 +26,8 @@ class StallMenuScreen extends ConsumerStatefulWidget {
 
 class _StallMenuScreenState extends ConsumerState<StallMenuScreen> {
   final TextEditingController _searchController = TextEditingController();
+
+  bool _showReviews = false; // ✅ added toggle for reviews tab
 
   @override
   void initState() {
@@ -66,8 +69,10 @@ class _StallMenuScreenState extends ConsumerState<StallMenuScreen> {
           child: ScaleTransition(
             scale: Tween<double>(begin: 0.8, end: 1.0).animate(a1),
             child: AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-              contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 32),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15)),
+              contentPadding:
+                  const EdgeInsets.symmetric(vertical: 20, horizontal: 32),
               content: SizedBox(
                 width: 320,
                 child: Column(
@@ -80,14 +85,18 @@ class _StallMenuScreenState extends ConsumerState<StallMenuScreen> {
                       builder: (context, scale, child) {
                         return Transform.scale(
                           scale: scale,
-                          child: const Icon(Icons.favorite, color: Colors.redAccent, size: 80),
+                          child: const Icon(Icons.favorite,
+                              color: Colors.redAccent, size: 80),
                         );
                       },
                     ),
                     const SizedBox(height: 20),
                     const Text(
                       'Successfully Added to Favorites!',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textColor),
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: AppTheme.textColor),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -126,87 +135,108 @@ class _StallMenuScreenState extends ConsumerState<StallMenuScreen> {
         foregroundColor: Colors.white,
         elevation: 4.0,
       ),
-      body: CustomScrollView(
-        slivers: [
-          _buildSliverAppBar(context, isCurrentlyFavorite),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-              child: Container(
-                height: 50,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 2))],
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    hintText: 'Search menu...',
-                    prefixIcon: Icon(Icons.search, color: AppTheme.subtleTextColor),
-                  ),
-                  onTap: () {
-                    if (_searchController.text == 'Search menu...') {
-                      setState(() => _searchController.clear());
-                    }
-                  },
-                  onChanged: (value) {
-                    ref.read(productProvider(widget.stall.id).notifier).searchProducts(value);
-                  },
-                ),
-              ),
-            ),
-          ),
-          // Handle the AsyncValue from the grouped provider
-          menuItemsAsync.when(
-            loading: () => const SliverToBoxAdapter(
-              child: Center(child: Padding(
-                padding: EdgeInsets.all(32.0),
-                child: CircularProgressIndicator(color: AppTheme.primaryColor),
-              )),
-            ),
-            error: (err, stack) => SliverToBoxAdapter(
-              child: Center(child: Padding(
-                padding: const EdgeInsets.all(32.0),
-                child: Text('Failed to load menu: $err'),
-              )),
-            ),
-            data: (groupedMenuItems) {
-              if (groupedMenuItems.isEmpty) {
-                return const SliverToBoxAdapter(
+      body: _showReviews
+          ? UserReviewsTab(stall: widget.stall) // ✅ show reviews tab
+          : CustomScrollView(
+              slivers: [
+                _buildSliverAppBar(context, isCurrentlyFavorite),
+                SliverToBoxAdapter(
                   child: Padding(
-                    padding: EdgeInsets.all(32.0),
-                    child: Center(child: Text('No menu items found', style: TextStyle(fontSize: 14))),
-                  ),
-                );
-              }
-              return SliverMainAxisGroup(
-                slivers: [
-                  for (final entry in groupedMenuItems.entries) ...[
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                        child: Text(entry.key, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textColor)),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 12.0),
+                    child: Container(
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                              color: Colors.grey.withOpacity(0.2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2))
+                        ],
                       ),
-                    ),
-                    SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final menuItem = entry.value[index];
-                          return _buildMenuItemCard(menuItem);
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          hintText: 'Search menu...',
+                          prefixIcon: Icon(Icons.search,
+                              color: AppTheme.subtleTextColor),
+                        ),
+                        onTap: () {
+                          if (_searchController.text == 'Search menu...') {
+                            setState(() => _searchController.clear());
+                          }
                         },
-                        childCount: entry.value.length,
+                        onChanged: (value) {
+                          ref
+                              .read(productProvider(widget.stall.id).notifier)
+                              .searchProducts(value);
+                        },
                       ),
                     ),
-                  ],
-                ],
-              );
-            },
-          ),
-        ],
-      ),
+                  ),
+                ),
+                // Handle the AsyncValue from the grouped provider
+                menuItemsAsync.when(
+                  loading: () => const SliverToBoxAdapter(
+                    child: Center(
+                        child: Padding(
+                      padding: EdgeInsets.all(32.0),
+                      child: CircularProgressIndicator(
+                          color: AppTheme.primaryColor),
+                    )),
+                  ),
+                  error: (err, stack) => SliverToBoxAdapter(
+                    child: Center(
+                        child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Text('Failed to load menu: $err'),
+                    )),
+                  ),
+                  data: (groupedMenuItems) {
+                    if (groupedMenuItems.isEmpty) {
+                      return const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.all(32.0),
+                          child: Center(
+                              child: Text('No menu items found',
+                                  style: TextStyle(fontSize: 14))),
+                        ),
+                      );
+                    }
+                    return SliverMainAxisGroup(
+                      slivers: [
+                        for (final entry in groupedMenuItems.entries) ...[
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                              child: Text(entry.key,
+                                  style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppTheme.textColor)),
+                            ),
+                          ),
+                          SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final menuItem = entry.value[index];
+                                return _buildMenuItemCard(menuItem);
+                              },
+                              childCount: entry.value.length,
+                            ),
+                          ),
+                        ],
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ),
     );
   }
 
@@ -218,15 +248,49 @@ class _StallMenuScreenState extends ConsumerState<StallMenuScreen> {
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.85),
             shape: BoxShape.circle,
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 6, offset: const Offset(0, 3))],
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 6,
+                  offset: const Offset(0, 3))
+            ],
           ),
           child: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppTheme.primaryColor, size: 24),
-            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.arrow_back,
+                color: AppTheme.primaryColor, size: 24),
+            onPressed: () {
+              if (_showReviews) {
+                setState(() => _showReviews = false); // ✅ go back to menu
+              } else {
+                Navigator.of(context).pop();
+              }
+            },
           ),
         ),
       ),
       actions: [
+        // ⭐ Added review button
+        Padding(
+          padding: const EdgeInsets.only(right: 8.0, top: 8.0),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.85),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3))
+              ],
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.star_rate_rounded, color: Colors.amber),
+              onPressed: () {
+                setState(() => _showReviews = true);
+              },
+            ),
+          ),
+        ),
         if (widget.showFavoriteButton)
           Padding(
             padding: const EdgeInsets.only(right: 16.0, top: 8.0),
@@ -234,15 +298,23 @@ class _StallMenuScreenState extends ConsumerState<StallMenuScreen> {
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.85),
                 shape: BoxShape.circle,
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 6, offset: const Offset(0, 3))],
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3))
+                ],
               ),
               child: IconButton(
                 icon: Icon(
                   isCurrentlyFavorite ? Icons.favorite : Icons.favorite_border,
-                  color: isCurrentlyFavorite ? Colors.redAccent : AppTheme.primaryColor,
+                  color: isCurrentlyFavorite
+                      ? Colors.redAccent
+                      : AppTheme.primaryColor,
                 ),
                 onPressed: () {
-                  ref.read(shopServiceProvider).toggleFavoriteStatus(widget.stall.id, isCurrentlyFavorite);
+                  ref.read(shopServiceProvider).toggleFavoriteStatus(
+                      widget.stall.id, isCurrentlyFavorite);
                   if (!isCurrentlyFavorite) {
                     _showFavoriteAddedDialog(context);
                   }
@@ -251,7 +323,13 @@ class _StallMenuScreenState extends ConsumerState<StallMenuScreen> {
             ),
           ),
       ],
-      title: Text('${widget.stall.name} Menu', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+      title: Text(
+        _showReviews
+            ? '${widget.stall.name} Reviews'
+            : '${widget.stall.name} Menu', // ✅ dynamic title
+        style: const TextStyle(
+            color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17),
+      ),
       centerTitle: true,
       pinned: true,
       expandedHeight: 120.0,
@@ -276,7 +354,13 @@ class _StallMenuScreenState extends ConsumerState<StallMenuScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), spreadRadius: 1, blurRadius: 6, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 6,
+              offset: const Offset(0, 2))
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -285,13 +369,33 @@ class _StallMenuScreenState extends ConsumerState<StallMenuScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(menuItem.productName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textColor), maxLines: 2, overflow: TextOverflow.ellipsis),
+                Text(menuItem.productName,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: AppTheme.textColor),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 8),
-                Text('₱${menuItem.price.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.primaryColor)),
+                Text('₱${menuItem.price.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: AppTheme.primaryColor)),
                 const SizedBox(height: 4),
-                Text('${menuItem.quantity} left in stock', style: TextStyle(fontSize: 12, color: menuItem.quantity > 5 ? Colors.green : Colors.orange, fontWeight: FontWeight.w500)),
+                Text('${menuItem.quantity} left in stock',
+                    style: TextStyle(
+                        fontSize: 10,
+                        color: menuItem.quantity > 5
+                            ? Colors.green
+                            : Colors.orange,
+                        fontWeight: FontWeight.w500)),
                 const SizedBox(height: 8),
-                Text(menuItem.description ?? '', style: const TextStyle(fontSize: 12, color: AppTheme.subtleTextColor), maxLines: 2, overflow: TextOverflow.ellipsis),
+                Text(menuItem.description ?? '',
+                    style: const TextStyle(
+                        fontSize: 10, color: AppTheme.subtleTextColor),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis),
               ],
             ),
           ),
@@ -307,7 +411,9 @@ class _StallMenuScreenState extends ConsumerState<StallMenuScreen> {
                 width: 80,
                 height: 80,
                 color: AppTheme.cardColor,
-                child: const Center(child: Icon(Icons.fastfood, color: AppTheme.subtleTextColor)),
+                child: const Center(
+                    child:
+                        Icon(Icons.fastfood, color: AppTheme.subtleTextColor)),
               ),
             ),
           ),

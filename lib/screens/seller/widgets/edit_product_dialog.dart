@@ -7,8 +7,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:panot/models/product_model.dart';
 import 'package:panot/providers/product_provider.dart';
-import 'package:panot/providers/seller_shop_provider.dart'; // Import for subcategories
+import 'package:panot/providers/seller_shop_provider.dart';
 import 'package:panot/theme/app_theme.dart';
+
+// --- Constants for a professional and consistent UI ---
+const double _kSpacing = 16.0;
+const double _kSmallSpacing = 10.0;
+const double _kFontSize = 13.0;
+const double _kCornerRadius = 16.0;
 
 class EditProductDialog extends ConsumerStatefulWidget {
   final Product product;
@@ -28,21 +34,22 @@ class _EditProductDialogState extends ConsumerState<EditProductDialog> {
   XFile? _newImageFile;
   bool _isAvailable = true;
   bool _isLoading = false;
-  int? _selectedSubcategoryId; // State for the dropdown selection
+  int? _selectedSubcategoryId;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.product.productName);
-    _descriptionController = TextEditingController(text: widget.product.description);
-    _priceController = TextEditingController(text: widget.product.price.toString());
-    _quantityController = TextEditingController(text: widget.product.quantity.toString());
+    _descriptionController =
+        TextEditingController(text: widget.product.description);
+    _priceController =
+        TextEditingController(text: widget.product.price.toString());
+    _quantityController =
+        TextEditingController(text: widget.product.quantity.toString());
     _isAvailable = widget.product.isAvailable;
-    // Pre-select the product's current subcategory in the dropdown
     _selectedSubcategoryId = widget.product.subcategoryId;
   }
 
-  // ... (dispose and _pickImage methods are unchanged) ...
   @override
   void dispose() {
     _nameController.dispose();
@@ -62,12 +69,16 @@ class _EditProductDialogState extends ConsumerState<EditProductDialog> {
     }
   }
 
-
   Future<void> _submitForm() async {
+    // Hide keyboard
+    FocusScope.of(context).unfocus();
+
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       try {
-        await ref.read(productProvider(widget.product.shopId).notifier).updateProduct(
+        await ref
+            .read(productProvider(widget.product.shopId).notifier)
+            .updateProduct(
               productId: widget.product.productId,
               name: _nameController.text.trim(),
               description: _descriptionController.text.trim(),
@@ -76,7 +87,7 @@ class _EditProductDialogState extends ConsumerState<EditProductDialog> {
               isAvailable: _isAvailable,
               newImageFile: _newImageFile,
               existingImageUrl: widget.product.imageUrl,
-              subcategoryId: _selectedSubcategoryId, // Pass the selected ID
+              subcategoryId: _selectedSubcategoryId,
             );
 
         if (mounted) {
@@ -99,138 +110,303 @@ class _EditProductDialogState extends ConsumerState<EditProductDialog> {
     }
   }
 
+  // --- Reusable InputDecoration for a consistent look ---
+  InputDecoration _buildInputDecoration(String labelText,
+      {String prefixText = ''}) {
+    return InputDecoration(
+      labelText: labelText,
+      prefixText: prefixText.isNotEmpty ? prefixText : null,
+      labelStyle: const TextStyle(fontSize: _kFontSize, color: Colors.black54),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(_kCornerRadius / 2),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(_kCornerRadius / 2),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(_kCornerRadius / 2),
+        borderSide: BorderSide(color: AppTheme.primaryColor, width: 2.0),
+      ),
+    );
+  }
+
+  // --- Helper Widget for TextFormFields ---
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String labelText,
+    String? Function(String?)? validator,
+    TextInputType? keyboardType,
+    int maxLines = 1,
+    String prefixText = '',
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: _kSmallSpacing),
+      child: TextFormField(
+        controller: controller,
+        maxLines: maxLines,
+        keyboardType: keyboardType,
+        style: const TextStyle(fontSize: _kFontSize),
+        decoration: _buildInputDecoration(labelText, prefixText: prefixText),
+        validator: validator,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Fetch the subcategories available for this shop
-    final subcategoriesAsync = ref.watch(shopSubcategoriesProvider(widget.product.shopId));
+    final subcategoriesAsync =
+        ref.watch(shopSubcategoriesProvider(widget.product.shopId));
+    final theme = Theme.of(context);
 
     return AlertDialog(
-      title: const Text('Edit Product'),
-      content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Image Picker
-              Center(
-                child: GestureDetector(
-                  onTap: _pickImage,
-                  child: Container(
-                    height: 120,
-                    width: 120,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade400),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
+      backgroundColor: theme.scaffoldBackgroundColor,
+      title: Text(
+        'Edit Product',
+        style: theme.textTheme.titleLarge!.copyWith(
+          fontWeight: FontWeight.bold,
+          fontSize: 18.0,
+        ),
+      ),
+      contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(_kCornerRadius)),
+
+      content: SizedBox(
+        width: double.maxFinite,
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // --- Image Picker ---
+                Center(
+                  child: GestureDetector(
+                    onTap: _pickImage,
+                    child: Container(
+                      height: 110,
+                      width: 110,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(_kCornerRadius),
+                        border:
+                            Border.all(color: Colors.grey.shade300, width: 1.5),
+                      ),
                       child: _newImageFile != null
-                          ? (kIsWeb
-                              ? Image.network(_newImageFile!.path, fit: BoxFit.cover)
-                              : Image.file(File(_newImageFile!.path), fit: BoxFit.cover))
-                          : (widget.product.imageUrl != null && widget.product.imageUrl!.isNotEmpty
-                              ? Image.network(widget.product.imageUrl!, fit: BoxFit.cover)
-                              : const Center(child: Icon(Icons.add_a_photo, color: Colors.grey))),
+                          ? ClipRRect(
+                              borderRadius:
+                                  BorderRadius.circular(_kCornerRadius - 1),
+                              child: kIsWeb
+                                  ? Image.network(_newImageFile!.path,
+                                      fit: BoxFit.cover,
+                                      width: 110,
+                                      height: 110)
+                                  : Image.file(File(_newImageFile!.path),
+                                      fit: BoxFit.cover,
+                                      width: 110,
+                                      height: 110),
+                            )
+                          : (widget.product.imageUrl != null &&
+                                  widget.product.imageUrl!.isNotEmpty
+                              ? ClipRRect(
+                                  borderRadius:
+                                      BorderRadius.circular(_kCornerRadius - 1),
+                                  child: Image.network(
+                                    widget.product.imageUrl!,
+                                    fit: BoxFit.cover,
+                                    width: 110,
+                                    height: 110,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Center(
+                                        child: Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.photo_outlined,
+                                                color: Colors.grey.shade600,
+                                                size: 32),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'Current Photo',
+                                              style: TextStyle(
+                                                  color: Colors.grey.shade600,
+                                                  fontSize: _kFontSize - 1),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                )
+                              : Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.add_a_photo_outlined,
+                                          color: Colors.grey.shade600,
+                                          size: 32),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Add Photo',
+                                        style: TextStyle(
+                                            color: Colors.grey.shade600,
+                                            fontSize: _kFontSize - 1),
+                                      ),
+                                    ],
+                                  ),
+                                )),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: _kSpacing),
 
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Product Name'),
-                validator: (value) => value!.isEmpty ? 'Please enter a name' : null,
-              ),
+                // --- Form Fields ---
+                _buildTextField(
+                  controller: _nameController,
+                  labelText: 'Product Name',
+                  validator: (value) =>
+                      value!.isEmpty ? 'Please enter a name' : null,
+                ),
 
-              // --- SUBCATEGORY DROPDOWN ---
-              subcategoriesAsync.when(
-                loading: () => const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24.0),
-                  child: Center(child: Text('Loading categories...')),
-                ),
-                error: (err, stack) => const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16.0),
-                  child: Text('Could not load categories', style: TextStyle(color: Colors.red)),
-                ),
-                data: (subcategories) {
-                  return DropdownButtonFormField<int?>(
-                    value: _selectedSubcategoryId,
-                    hint: const Text('Select Subcategory'),
-                    isExpanded: true,
-                    items: subcategories.map((sub) {
-                      return DropdownMenuItem<int>(
-                        value: sub.id,
-                        child: Text(sub.name),
+                // --- SUBCATEGORY DROPDOWN ---
+                Padding(
+                  padding: const EdgeInsets.only(bottom: _kSmallSpacing),
+                  child: subcategoriesAsync.when(
+                    loading: () =>
+                        const Center(child: Text('Loading categories...')),
+                    error: (err, stack) => const Text(
+                        'Could not load categories',
+                        style: TextStyle(color: Colors.red)),
+                    data: (subcategories) {
+                      return DropdownButtonFormField<int?>(
+                        value: _selectedSubcategoryId,
+                        isExpanded: true,
+                        style: TextStyle(
+                            fontSize: _kFontSize,
+                            color: theme.textTheme.bodyMedium!.color),
+                        decoration: _buildInputDecoration('Select Subcategory'),
+                        hint: const Text('Select Subcategory',
+                            style: TextStyle(fontSize: _kFontSize)),
+                        items: subcategories.map((sub) {
+                          return DropdownMenuItem<int>(
+                            value: sub.id,
+                            child: Text(sub.name,
+                                style: const TextStyle(fontSize: _kFontSize)),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedSubcategoryId = value;
+                          });
+                        },
+                        validator: (value) => value == null
+                            ? 'Please select a subcategory'
+                            : null,
                       );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedSubcategoryId = value;
-                      });
                     },
-                    validator: (value) => value == null ? 'Please select a subcategory' : null,
-                  );
-                },
-              ),
-
-              TextFormField(
-                controller: _priceController,
-                decoration: const InputDecoration(labelText: 'Price', prefixText: '₱ '),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                validator: (value) {
-                  if (value!.isEmpty) return 'Please enter a price';
-                  if (double.tryParse(value) == null) return 'Enter a valid number';
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: _quantityController,
-                decoration: const InputDecoration(labelText: 'Quantity / Stock'),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value!.isEmpty) return 'Please enter a quantity';
-                  if (int.tryParse(value) == null) return 'Enter a valid whole number';
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Description (Optional)'),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 16),
-
-              // Availability Switch
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Available for purchase', style: TextStyle(fontSize: 16)),
-                  Switch(
-                    value: _isAvailable,
-                    onChanged: (value) => setState(() => _isAvailable = value),
-                    activeColor: AppTheme.primaryColor,
                   ),
-                ],
-              ),
-            ],
+                ),
+
+                _buildTextField(
+                  controller: _priceController,
+                  labelText: 'Price',
+                  prefixText: '₱ ',
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  validator: (value) {
+                    if (value!.isEmpty) return 'Please enter a price';
+                    if (double.tryParse(value) == null)
+                      return 'Enter a valid number';
+                    return null;
+                  },
+                ),
+
+                _buildTextField(
+                  controller: _quantityController,
+                  labelText: 'Quantity / Stock',
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value!.isEmpty) return 'Please enter a quantity';
+                    if (int.tryParse(value) == null)
+                      return 'Enter a valid whole number';
+                    return null;
+                  },
+                ),
+
+                _buildTextField(
+                  controller: _descriptionController,
+                  labelText: 'Description (Optional)',
+                  maxLines: 3,
+                ),
+                const SizedBox(height: _kSpacing),
+
+                // --- Availability Switch ---
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 4, vertical: _kSmallSpacing),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Available for purchase',
+                        style: TextStyle(
+                          fontSize: _kFontSize,
+                          color: theme.textTheme.bodyMedium!.color,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Switch(
+                        value: _isAvailable,
+                        onChanged: (value) =>
+                            setState(() => _isAvailable = value),
+                        activeColor: AppTheme.primaryColor,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
+      // --- Actions ---
+      actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(
+            'Cancel',
+            style: TextStyle(
+                fontSize: _kFontSize,
+                color: theme.colorScheme.error,
+                fontWeight: FontWeight.bold),
+          ),
         ),
         FilledButton(
           onPressed: _isLoading ? null : _submitForm,
-          style: FilledButton.styleFrom(backgroundColor: AppTheme.primaryColor),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppTheme.primaryColor,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          ),
           child: _isLoading
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-              : const Text('Save Changes'),
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2.5, color: Colors.white),
+                )
+              : const Text(
+                  'Save Changes',
+                  style: TextStyle(
+                      fontSize: _kFontSize, fontWeight: FontWeight.bold),
+                ),
         ),
       ],
     );

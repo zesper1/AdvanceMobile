@@ -9,7 +9,10 @@ import 'package:panot/providers/seller_shop_provider.dart';
 import 'package:panot/screens/login.dart';
 import 'package:panot/theme/app_theme.dart';
 import 'package:panot/widgets/logout_dialog.dart';
-import 'package:panot/widgets/stalls/food_stall_card.dart';
+import 'package:panot/widgets/userwidgets/food_stall_card.dart';
+import 'package:panot/models/food_stall_model.dart' as food_model;
+import 'package:panot/screens/seller/seller_shop_management_screen.dart'
+    as shop_mgmt;
 
 import 'create_shop.dart';
 import 'seller_account.dart';
@@ -79,7 +82,8 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => SellerAccountScreen(sellerId: widget.sellerId),
+                builder: (context) =>
+                    SellerAccountScreen(sellerId: widget.sellerId),
               ),
             );
           },
@@ -88,7 +92,8 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
           icon: const Icon(Icons.logout, color: Colors.white),
           tooltip: 'Logout',
           onPressed: () async {
-            final didRequestLogout = await showLogoutConfirmationDialog(context);
+            final didRequestLogout =
+                await showLogoutConfirmationDialog(context);
             if (mounted && didRequestLogout == true) {
               try {
                 await ref.read(authNotifierProvider.notifier).signOut();
@@ -118,10 +123,13 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
     // 2. Handle YOUR shops (sellerShopProvider) loading/error states first
     return shopsAsyncValue.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text('Failed to load my shops: $error')),
+      error: (error, stack) =>
+          Center(child: Text('Failed to load my shops: $error')),
       data: (allMyShops) {
-        final approvedShops = allMyShops.where((s) => s.status == ShopStatus.Approved).toList();
-        final pendingShops = allMyShops.where((s) => s.status == ShopStatus.Pending).toList();
+        final approvedShops =
+            allMyShops.where((s) => s.status == ShopStatus.Approved).toList();
+        final pendingShops =
+            allMyShops.where((s) => s.status == ShopStatus.Pending).toList();
 
         // 3. Now that 'allMyShops' is ready, handle the 'All Shops' tab data (foodStallProvider)
         return Column(
@@ -153,8 +161,11 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
                           _buildPendingTab(pendingShops),
                           // 4. CORRECTION HERE: Handle the AsyncValue for the 'All Shops' tab
                           allShopsForCustomerView.when(
-                            loading: () => const Center(child: CircularProgressIndicator()),
-                            error: (error, stack) => Center(child: Text('Failed to load all stalls: $error')),
+                            loading: () => const Center(
+                                child: CircularProgressIndicator()),
+                            error: (error, stack) => Center(
+                                child:
+                                    Text('Failed to load all stalls: $error')),
                             data: (allShops) {
                               // Data is available, pass the plain List<FoodStall>
                               return _buildAllShopsTab(allShops);
@@ -315,14 +326,17 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: pendingShops.length,
-      itemBuilder: (context, index) => _buildPendingShopCard(pendingShops[index]),
+      itemBuilder: (context, index) =>
+          _buildPendingShopCard(pendingShops[index]),
     );
   }
 
   Widget _buildAllShopsTab(List<FoodStall> allShops) {
     List<FoodStall> filteredShops = allShops;
     if (_selectedCategory != 'All') {
-      filteredShops = filteredShops.where((shop) => shop.category == _selectedCategory).toList();
+      filteredShops = filteredShops
+          .where((shop) => shop.category == _selectedCategory)
+          .toList();
     }
     if (_selectedStatus != 'All') {
       filteredShops = filteredShops.where((shop) {
@@ -422,8 +436,10 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
                         value: _selectedCategory,
                         isExpanded: true,
                         underline: const SizedBox(),
-                        icon: const Icon(Icons.arrow_drop_down, color: AppTheme.textColor, size: 20),
-                        style: const TextStyle(fontSize: 14, color: AppTheme.textColor),
+                        icon: const Icon(Icons.arrow_drop_down,
+                            color: AppTheme.textColor, size: 20),
+                        style: const TextStyle(
+                            fontSize: 14, color: AppTheme.textColor),
                         items: categories.map((String category) {
                           return DropdownMenuItem<String>(
                             value: category,
@@ -443,7 +459,9 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Status', /* ... */),
+                    const Text(
+                      'Status', /* ... */
+                    ),
                     const SizedBox(height: 4),
                     Container(
                       height: 48,
@@ -453,9 +471,15 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
                       ),
                       child: Row(
                         children: [
-                          Expanded(child: _buildStatusToggle('All', Icons.all_inclusive)),
-                          Expanded(child: _buildStatusToggle('Open', Icons.check_circle)),
-                          Expanded(child: _buildStatusToggle('Closed', Icons.cancel)),
+                          Expanded(
+                              child: _buildStatusToggle(
+                                  'All', Icons.all_inclusive)),
+                          Expanded(
+                              child: _buildStatusToggle(
+                                  'Open', Icons.check_circle)),
+                          Expanded(
+                              child:
+                                  _buildStatusToggle('Closed', Icons.cancel)),
                         ],
                       ),
                     ),
@@ -486,7 +510,8 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
       child: Container(
         margin: const EdgeInsets.all(2),
         decoration: BoxDecoration(
-          color: isSelected ? selectedColor.withOpacity(0.1) : Colors.transparent,
+          color:
+              isSelected ? selectedColor.withOpacity(0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
             color: isSelected ? selectedColor : Colors.transparent,
@@ -553,10 +578,12 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(shop.category, style: const TextStyle(color: AppTheme.subtleTextColor)),
+            Text(shop.category,
+                style: const TextStyle(color: AppTheme.subtleTextColor)),
             Text(
               '${shop.openingTime} - ${shop.closingTime}',
-              style: const TextStyle(color: AppTheme.subtleTextColor, fontSize: 12),
+              style: const TextStyle(
+                  color: AppTheme.subtleTextColor, fontSize: 12),
             ),
             Padding(
               padding: const EdgeInsets.only(top: 6.0),
@@ -567,7 +594,8 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => SellerShopManagementScreen(shop: shop),
+                        builder: (context) =>
+                            SellerShopManagementScreen(shop: shop),
                       ),
                     );
                   },
@@ -578,9 +606,12 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
                   ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.primaryColor,
-                    side: BorderSide(color: AppTheme.primaryColor.withOpacity(0.5), width: 1),
+                    side: BorderSide(
+                        color: AppTheme.primaryColor.withOpacity(0.5),
+                        width: 1),
                     padding: const EdgeInsets.symmetric(horizontal: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20)),
                   ),
                 ),
               ),
@@ -596,7 +627,8 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
           ),
           child: const Text(
             'Approved',
-            style: TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 12),
+            style: TextStyle(
+                color: Colors.green, fontWeight: FontWeight.w600, fontSize: 12),
           ),
         ),
       ),
@@ -634,15 +666,18 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
             ),
           ),
         ),
-        title: Text(shop.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        title: Text(shop.name,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(shop.category, style: const TextStyle(color: AppTheme.subtleTextColor)),
+            Text(shop.category,
+                style: const TextStyle(color: AppTheme.subtleTextColor)),
             if (shop.description != null && shop.description!.isNotEmpty)
               Text(
                 shop.description!,
-                style: const TextStyle(color: AppTheme.subtleTextColor, fontSize: 12),
+                style: const TextStyle(
+                    color: AppTheme.subtleTextColor, fontSize: 12),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -664,7 +699,8 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
           },
           itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
             const PopupMenuItem<String>(value: 'edit', child: Text('Edit')),
-            const PopupMenuItem<String>(value: 'cancel', child: Text('Cancel Request')),
+            const PopupMenuItem<String>(
+                value: 'cancel', child: Text('Cancel Request')),
           ],
         ),
       ),
@@ -717,7 +753,8 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: const Text('Confirm Cancellation'),
-          content: const Text('Are you sure you want to cancel this shop request? This will permanently delete it.'),
+          content: const Text(
+              'Are you sure you want to cancel this shop request? This will permanently delete it.'),
           actions: <Widget>[
             TextButton(
               child: const Text('Back'),
@@ -730,13 +767,17 @@ class _SellerHomeScreenState extends ConsumerState<SellerHomeScreen> {
                 Navigator.of(dialogContext).pop();
                 try {
                   // This assumes your notifier has a deleteShop method.
-                  await ref.read(sellerShopProvider.notifier).deleteShop(shopId);
+                  await ref
+                      .read(sellerShopProvider.notifier)
+                      .deleteShop(shopId);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Shop request cancelled successfully!')),
+                    const SnackBar(
+                        content: Text('Shop request cancelled successfully!')),
                   );
                 } catch (e) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Cancellation failed: ${e.toString()}')),
+                    SnackBar(
+                        content: Text('Cancellation failed: ${e.toString()}')),
                   );
                 }
               },

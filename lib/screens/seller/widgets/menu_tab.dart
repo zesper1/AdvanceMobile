@@ -34,7 +34,8 @@ class MenuTab extends ConsumerWidget {
             child: Text(
               'No products yet.\nTap the + button to add your first one!',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+              // DECREASED FONT SIZE from 16 to 14
+              style: TextStyle(fontSize: 14, color: Colors.grey),
             ),
           );
         }
@@ -55,7 +56,8 @@ class MenuTab extends ConsumerWidget {
                   padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
                   child: Text(
                     category.name,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    // DECREASED TEXT STYLE from titleLarge to titleMedium
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                   ),
@@ -65,7 +67,7 @@ class MenuTab extends ConsumerWidget {
                     padding: EdgeInsets.symmetric(vertical: 8.0),
                     child: Text(
                       'No items in this category yet.',
-                      style: TextStyle(color: Colors.grey),
+                      // REMOVED explicit TextStyle(color: Colors.grey) to use default smaller text size
                     ),
                   )
                 else
@@ -90,7 +92,8 @@ class MenuTab extends ConsumerWidget {
                         // Show the Edit Product Dialog
                         showDialog(
                           context: context,
-                          builder: (context) => EditProductDialog(product: product),
+                          builder: (context) =>
+                              EditProductDialog(product: product),
                         );
                       },
                       onDelete: () async {
@@ -102,8 +105,10 @@ class MenuTab extends ConsumerWidget {
 
                         // If user confirmed, call the delete method
                         if (didConfirm == true && context.mounted) {
-                          ref.read(productProvider(product.shopId).notifier)
-                             .deleteProduct(product.productId, product.imageUrl);
+                          ref
+                              .read(productProvider(product.shopId).notifier)
+                              .deleteProduct(
+                                  product.productId, product.imageUrl);
                         }
                       },
                     );

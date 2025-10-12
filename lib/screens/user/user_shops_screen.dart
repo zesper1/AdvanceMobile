@@ -5,7 +5,7 @@ import 'package:panot/screens/login.dart';
 import 'package:panot/widgets/logout_dialog.dart';
 import '../../models/food_stall_model.dart';
 import '../../providers/food_stall_provider.dart';
-import '../../widgets/stalls/food_stall_card.dart';
+import '../../widgets/userwidgets/food_stall_card.dart';
 // import '../../widgets/navbar.dart'; // No longer used
 import '../../theme/app_theme.dart';
 import 'favorites.dart';
@@ -33,7 +33,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _searchController.dispose();
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     // Watch all primary async values. They all return AsyncValue<List<FoodStall>>.
@@ -43,7 +43,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final openShopsAsync = ref.watch(currentlyOpenShopsProvider);
 
     final favoriteIdsAsync = ref.watch(favoriteShopIdsStreamProvider);
-
 
     // Watch the user profile (already correctly handling AsyncValue)
     final userProfile = ref.watch(authNotifierProvider);
@@ -59,26 +58,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     //    we can calculate categories or filter the main view.
     return allStallsAsync.when(
       loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: AppTheme.primaryColor)),
+        body: Center(
+            child: CircularProgressIndicator(color: AppTheme.primaryColor)),
       ),
       error: (error, stack) => Scaffold(
         appBar: _buildAppBar(),
         body: Center(child: Text('Error loading data: $error')),
       ),
-      data: (allStallsList) { // This is the synchronous List<FoodStall>
+      data: (allStallsList) {
+        // This is the synchronous List<FoodStall>
         // 2. Data is ready. Calculate categories using the synchronous list.
-        final categories = allStallsList.map((stall) => stall.category).toSet().toList();
+        final categories =
+            allStallsList.map((stall) => stall.category).toSet().toList();
         categories.insert(0, 'All');
 
         // 3. Get the category-filtered list (which is also AsyncValue)
         final categoryShopsAsync = _selectedCategory == 'All'
             ? allStallsAsync // Pass the already resolved AsyncValue.data(allStallsList)
             : ref.watch(stallsByCategoryProvider(_selectedCategory));
-            
+
         // Ensure the categoryShops are resolved to a synchronous list for use below.
         final categoryShopsList = categoryShopsAsync.value ?? [];
         final favoriteIdsSet = favoriteIdsAsync.value?.toSet() ?? <int>{};
-
 
         Widget welcomeSection = Container(
           // ... (Your welcomeSection implementation, using firstName)
@@ -103,7 +104,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               RichText(
                 text: TextSpan(
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: AppTheme.textColor,
                   ),
@@ -122,7 +123,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Text(
                 'Here is your daily Nationalian Canteen menu...',
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 14,
                   color: AppTheme.textColor.withOpacity(0.93),
                   fontWeight: FontWeight.w500,
                 ),
@@ -137,35 +138,45 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             padding: const EdgeInsets.symmetric(vertical: 8.0),
             children: [
               welcomeSection,
-              
+
               // 4. Wrap derived sections in their own .when() to handle loading/error
-              //    state independently. If the base list (allStallsList) loaded, 
+              //    state independently. If the base list (allStallsList) loaded,
               //    these derived lists should also load quickly.
-              
+
               // Popular Shops Section
               popularShopsAsync.when(
                 loading: () => _buildSectionPlaceholder('Popular Shops'),
                 error: (_, __) => const SizedBox.shrink(),
-                data: (stalls) => _buildStallSection('Popular Shops', stalls, isHorizontal: true, cardType: 'vertical', favoriteIds: favoriteIdsSet),
+                data: (stalls) => _buildStallSection('Popular Shops', stalls,
+                    isHorizontal: true,
+                    cardType: 'vertical',
+                    favoriteIds: favoriteIdsSet),
               ),
-              
+
               // Favorites Section
               favoriteShopsAsync.when(
                 loading: () => _buildSectionPlaceholder('Favorites'),
                 error: (_, __) => const SizedBox.shrink(),
-                data: (stalls) => _buildStallSection('Favorites', stalls, isHorizontal: true, cardType: 'vertical', favoriteIds: favoriteIdsSet),
+                data: (stalls) => _buildStallSection('Favorites', stalls,
+                    isHorizontal: true,
+                    cardType: 'vertical',
+                    favoriteIds: favoriteIdsSet),
               ),
 
               // Currently Open Section
               openShopsAsync.when(
                 loading: () => _buildSectionPlaceholder('Currently Open'),
                 error: (_, __) => const SizedBox.shrink(),
-                data: (stalls) => _buildStallSection('Currently Open', stalls, isHorizontal: false, cardType: 'horizontal', favoriteIds: favoriteIdsSet),
+                data: (stalls) => _buildStallSection('Currently Open', stalls,
+                    isHorizontal: false,
+                    cardType: 'horizontal',
+                    favoriteIds: favoriteIdsSet),
               ),
 
               // Category Section (uses the synchronous list derived earlier)
-              _buildCategorySection(categories, categoryShopsList, favoriteIdsSet),
-              
+              _buildCategorySection(
+                  categories, categoryShopsList, favoriteIdsSet),
+
               const SizedBox(height: 80),
             ],
           ),
@@ -173,25 +184,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       },
     );
   }
+
   Widget _buildSectionPlaceholder(String title) {
-      return Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                  Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-                  const SizedBox(
-                      height: 100,
-                      child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                  ),
-              ],
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style:
+                  const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          const SizedBox(
+            height: 100,
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
           ),
-      );
+        ],
+      ),
+    );
   }
+
   PreferredSizeWidget _buildAppBar() {
     return PreferredSize(
-      preferredSize: const Size.fromHeight(130),
+      preferredSize: const Size.fromHeight(120), // ⬇️ Slightly shorter app bar
       child: Stack(
         children: [
           AppBar(
@@ -206,35 +221,47 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   image: DecorationImage(
                     image: AssetImage('assets/NU-D.jpg'),
                     fit: BoxFit.cover,
+                    alignment: Alignment.center,
                   ),
                 ),
               ),
             ),
             title: null,
             bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(80),
+              preferredSize:
+                  const Size.fromHeight(100), // ⬇️ smaller search bar area
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8.0), // ⬇️ reduced vertical padding
                 child: Container(
-                  height: 50,
+                  height: 50, // ⬇️ smaller search field height (from 50)
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius:
+                        BorderRadius.circular(10), // slightly tighter corners
                     boxShadow: [
                       BoxShadow(
                         color: Colors.grey.withOpacity(0.2),
-                        blurRadius: 8,
+                        blurRadius: 6,
                         offset: const Offset(0, 2),
                       ),
                     ],
                   ),
                   child: TextField(
                     controller: _searchController,
+                    style: const TextStyle(fontSize: 13),
                     decoration: const InputDecoration(
                       border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       hintText: 'Looking for something?',
-                      prefixIcon: Icon(Icons.search, color: Color.fromARGB(255, 214, 31, 31)),
+                      hintStyle: TextStyle(fontSize: 13, color: Colors.grey),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        size: 20,
+                        color: Color.fromARGB(255, 214, 31, 31),
+                      ),
                     ),
                     onTap: () {
                       if (_searchController.text == 'Looking for something?') {
@@ -261,7 +288,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: Center(
               child: Image.asset(
                 'assets/NU-Dine.png',
-                height: 70,
+                height: 70, // ⬇️ slightly smaller logo
                 fit: BoxFit.contain,
               ),
             ),
@@ -272,93 +299,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Favorites circular white button (unchanged)
-                Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  width: 44,
-                  height: 44,
-                  child: Material(
-                    color: Colors.white,
-                    shape: const CircleBorder(),
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: () {
-                        Navigator.push(
-                          context,
+                _buildIconButton(
+                  icon: Icons.favorite_border,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const FavoritesScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _buildIconButton(
+                  icon: Icons.person_outline,
+                  onTap: () => print('Profile button tapped!'),
+                ),
+                _buildIconButton(
+                  icon: Icons.logout,
+                  onTap: () async {
+                    final didRequestLogout =
+                        await showLogoutConfirmationDialog(context);
+                    if (mounted && didRequestLogout == true) {
+                      try {
+                        await ref.read(authNotifierProvider.notifier).signOut();
+                        Navigator.of(context).pushReplacement(
                           MaterialPageRoute(
-                            builder: (context) => const FavoritesScreen(),
+                              builder: (context) => const LoginScreen()),
+                        );
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Failed to log out: $e'),
+                            backgroundColor:
+                                Theme.of(context).colorScheme.error,
                           ),
                         );
-                      },
-                      child: Center(
-                        child: Icon(
-                          Icons.favorite_border,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                // MODIFIED: Profile circular white button now only prints a log
-                Container(
-                  margin: const EdgeInsets.only(right: 8), // Added margin for spacing
-                  width: 44,
-                  height: 44,
-                  child: Material(
-                    color: Colors.white,
-                    shape: const CircleBorder(),
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: () {
-                        // Per your request, this now just prints to the console
-                        print('Profile button tapped!');
-                      },
-                      child: Center(
-                        child: Icon(
-                          Icons.person_outline,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                // ADDED: Logout circular white button with the original logout logic
-                Container(
-                  width: 44,
-                  height: 44,
-                  child: Material(
-                    color: Colors.white,
-                    shape: const CircleBorder(),
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: () async {
-                        final didRequestLogout = await showLogoutConfirmationDialog(context);
-                        if (mounted && didRequestLogout == true) {
-                          try {
-                            await ref.read(authNotifierProvider.notifier).signOut();
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(builder: (context) => const LoginScreen()),
-                            );
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Failed to log out: $e'),
-                                backgroundColor: Theme.of(context).colorScheme.error,
-                              ),
-                            );
-                          }
-                        }
-                      },
-                      child: Center(
-                        child: Icon(
-                          Icons.logout, // The original logout icon
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                    ),
-                  ),
+                      }
+                    }
+                  },
                 ),
               ],
             ),
@@ -367,13 +345,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
     );
   }
-  
+
+  Widget _buildIconButton(
+      {required IconData icon, required VoidCallback onTap}) {
+    return Container(
+      margin: const EdgeInsets.only(right: 8),
+      width: 45, // ⬇️ smaller buttons
+      height: 45,
+      child: Material(
+        color: Colors.white,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: Center(
+            child: Icon(icon, color: AppTheme.primaryColor, size: 20),
+          ),
+        ),
+      ),
+    );
+  }
+
   // ... rest of the file is unchanged ...
   // ✅ 4. Update method signatures to accept the `favoriteIds` set.
   Widget _buildStallSection(String title, List<FoodStall> stalls,
       {required bool isHorizontal,
       required String cardType,
-      required Set<int> favoriteIds}) { // <-- ADDED
+      required Set<int> favoriteIds}) {
+    // <-- ADDED
     if (stalls.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -394,17 +393,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           const SizedBox(height: 12),
           isHorizontal
-              ? _buildHorizontalStallList(stalls, cardType: cardType, favoriteIds: favoriteIds) // <-- PASS DOWN
-              : _buildVerticalStallList(stalls, cardType: cardType, favoriteIds: favoriteIds), // <-- PASS DOWN
+              ? _buildHorizontalStallList(stalls,
+                  cardType: cardType, favoriteIds: favoriteIds) // <-- PASS DOWN
+              : _buildVerticalStallList(stalls,
+                  cardType: cardType,
+                  favoriteIds: favoriteIds), // <-- PASS DOWN
         ],
       ),
     );
   }
 
   Widget _buildHorizontalStallList(List<FoodStall> stalls,
-      {required String cardType, required Set<int> favoriteIds}) { // <-- ADDED
+      {required String cardType, required Set<int> favoriteIds}) {
+    // <-- ADDED
     final screenWidth = MediaQuery.of(context).size.width;
-    final cardWidth = cardType == 'vertical' ? screenWidth * 0.65 : screenWidth * 0.75;
+    final cardWidth =
+        cardType == 'vertical' ? screenWidth * 0.65 : screenWidth * 0.75;
     final cardHeight = cardType == 'vertical' ? 240.0 : 160.0;
 
     return SizedBox(
@@ -429,7 +433,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildVerticalStallList(List<FoodStall> stalls,
-      {required String cardType, required Set<int> favoriteIds}) { // <-- ADDED
+      {required String cardType, required Set<int> favoriteIds}) {
+    // <-- ADDED
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
@@ -448,7 +453,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildCategorySection(
-      List<String> categories, List<FoodStall> stalls, Set<int> favoriteIds) { // <-- ADDED
+      List<String> categories, List<FoodStall> stalls, Set<int> favoriteIds) {
+    // <-- ADDED
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
@@ -499,7 +505,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          _buildVerticalStallList(stalls, cardType: 'horizontal', favoriteIds: favoriteIds), // <-- PASS DOWN
+          _buildVerticalStallList(stalls,
+              cardType: 'horizontal',
+              favoriteIds: favoriteIds), // <-- PASS DOWN
         ],
       ),
     );

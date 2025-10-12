@@ -10,6 +10,7 @@ import '../models/seller_shop_model.dart';
 
 // Provider for the ShopService dependency
 final shopServiceProvider = Provider<ShopService>((ref) => ShopService());
+
 // CORRECTED: The AdminService provider now gets the client and passes it to the service.
 class SellerShopNotifier extends AutoDisposeAsyncNotifier<List<SellerShop>> {
   @override
@@ -39,6 +40,7 @@ class SellerShopNotifier extends AutoDisposeAsyncNotifier<List<SellerShop>> {
             categoryName: categoryName,
             subcategoryNames: subcategoryNames,
           );
+
       // After successfully adding, refetch the full list to update the UI.
       return ref.read(shopServiceProvider).getSellerShops();
     });
@@ -67,17 +69,19 @@ class SellerShopNotifier extends AutoDisposeAsyncNotifier<List<SellerShop>> {
             categoryId: categoryId,
             subcategoryIds: subcategoryIds,
           );
+
       // After updating, refetch the full list to update the UI.
       return ref.read(shopServiceProvider).getSellerShops();
     });
   }
+
   /// This is business logic that lives alongside the state management.
   void sendShopStatusNotification(
     SellerShop shop,
     ShopStatus status, {
     String? adminNotes,
   }) {
-    // This uses the built-in `ref` from the Notifier, no need to pass it in.
+    // This uses the built-in ref from the Notifier, no need to pass it in.
     final notificationNotifier = ref.read(notificationProvider.notifier);
 
     final notification = SellerNotification(
@@ -102,10 +106,12 @@ class SellerShopNotifier extends AutoDisposeAsyncNotifier<List<SellerShop>> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       await ref.read(shopServiceProvider).deleteShop(shopId);
+
       // After deleting, refetch the list to update the UI
       return build();
     });
   }
+
   Future<void> updateBasicShopDetails({
     required int shopId,
     required String shopName,
@@ -117,17 +123,20 @@ class SellerShopNotifier extends AutoDisposeAsyncNotifier<List<SellerShop>> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       await ref.read(shopServiceProvider).updateShopDetails(
-        shopId: shopId,
-        shopName: shopName,
-        description: description,
-        openingTime: openingTime,
-        closingTime: closingTime,
-        categoryId: categoryId,
-      );
+            shopId: shopId,
+            shopName: shopName,
+            description: description,
+            openingTime: openingTime,
+            closingTime: closingTime,
+            categoryId: categoryId,
+          );
+
       return ref.read(shopServiceProvider).getSellerShops();
     });
   }
-} // This brace correctly closes the SellerShopNotifier class.
+}
+
+// This brace correctly closes the SellerShopNotifier class.
 
 // The main provider for accessing the notifier and its state
 final sellerShopProvider =
@@ -136,32 +145,39 @@ final sellerShopProvider =
 );
 
 // A provider to get all shops (already filtered for the current seller by the notifier)
-final allSellerShopsProvider = Provider.autoDispose<AsyncValue<List<SellerShop>>>((ref) {
+final allSellerShopsProvider =
+    Provider.autoDispose<AsyncValue<List<SellerShop>>>((ref) {
   return ref.watch(sellerShopProvider);
 });
 
 // A provider to get only the approved shops for the current seller
-final sellerApprovedShopsProvider = Provider.autoDispose<AsyncValue<List<SellerShop>>>((ref) {
+final sellerApprovedShopsProvider =
+    Provider.autoDispose<AsyncValue<List<SellerShop>>>((ref) {
   // Watch the main provider and filter its data when it's available
   return ref.watch(sellerShopProvider).whenData(
-    (shops) => shops.where((shop) => shop.status == ShopStatus.Approved).toList(),
-  );
+        (shops) =>
+            shops.where((shop) => shop.status == ShopStatus.Approved).toList(),
+      );
 });
 
 // A provider to get only the pending shops for the current seller
-final sellerPendingShopsProvider = Provider.autoDispose<AsyncValue<List<SellerShop>>>((ref) {
+final sellerPendingShopsProvider =
+    Provider.autoDispose<AsyncValue<List<SellerShop>>>((ref) {
   return ref.watch(sellerShopProvider).whenData(
-    (shops) => shops.where((shop) => shop.status == ShopStatus.Pending).toList(),
-  );
-});
-/// A provider that fetches the list of subcategory names for a given shopId.
-// MODIFIED: This provider now returns a typed list
-// ✅ CORRECTED: The provider's return type is now List<ShopSubcategory>.
-final shopSubcategoriesProvider =
-    FutureProvider.autoDispose.family<List<ShopSubcategory>, int>((ref, shopId) {
-  // This correctly calls the service method that returns a Future<List<ShopSubcategory>>
-  return ref.watch(shopServiceProvider).getShopSubcategories(shopId);
+        (shops) =>
+            shops.where((shop) => shop.status == ShopStatus.Pending).toList(),
+      );
 });
 
+/// A provider that fetches the list of subcategory names for a given shopId.
+/// MODIFIED: This provider now returns a typed list
+/// ✅ CORRECTED: The provider's return type is now List<ShopSubcategory>.
+final shopSubcategoriesProvider =
+    FutureProvider.autoDispose.family<List<ShopSubcategory>, int>(
+  (ref, shopId) {
+    // This correctly calls the service method that returns a Future<List<ShopSubcategory>>
+    return ref.watch(shopServiceProvider).getShopSubcategories(shopId);
+  },
+);
 
 // The extra closing brace that caused the error has been removed from here.

@@ -6,9 +6,13 @@ import '../../theme/app_theme.dart';
 import '../../screens/seller/widgets/menu_tab.dart';
 import '../../screens/seller/widgets/details_tab.dart';
 import '../../screens/seller/widgets/stock_tab.dart';
+import '../../screens/seller/widgets/reviewstab.dart'; // ADD THIS IMPORT
 
 // The enum is no longer needed for navigation state
 // enum ManagementTab { menu, details, stocks }
+
+// MODIFIED: Renamed the temporary enum for the operational status
+enum ShopAvailability { open, closed, onBreak }
 
 class SellerShopManagementScreen extends ConsumerStatefulWidget {
   final SellerShop shop;
@@ -25,6 +29,10 @@ class _SellerShopManagementScreenState
   int _selectedIndex = 0;
   bool _showAdditionalDetails = false;
 
+  // TEMPORARY: State for the Operational Status, using the new enum
+  // Initial state is Open for demonstration
+  ShopAvailability _operationalStatus = ShopAvailability.open;
+
   // ✅ Define the pages to be switched
   late final List<Widget> _pages;
 
@@ -35,7 +43,32 @@ class _SellerShopManagementScreenState
       MenuTab(shop: widget.shop),
       DetailsTab(shop: widget.shop),
       StocksTab(shop: widget.shop),
+      ReviewsTab(shop: widget.shop),
     ];
+  }
+
+  // NEW: Dynamic color getter for the selected toggle button
+  Color get _color {
+    switch (_operationalStatus) {
+      case ShopAvailability.open:
+        return Colors.green.shade600;
+      case ShopAvailability.closed:
+        return Colors.red.shade600;
+      case ShopAvailability.onBreak:
+        return Colors.orange.shade700;
+    }
+  }
+
+  // NEW: Dynamic light fill color getter for the selected toggle button
+  Color get _fillColor {
+    switch (_operationalStatus) {
+      case ShopAvailability.open:
+        return Colors.green.shade100;
+      case ShopAvailability.closed:
+        return Colors.red.shade100;
+      case ShopAvailability.onBreak:
+        return Colors.orange.shade100;
+    }
   }
 
   // SliverAppBar for the management screen (no changes needed here)
@@ -62,35 +95,18 @@ class _SellerShopManagementScreenState
           ),
         ),
       ),
-      actions: [
-        Padding(
-          padding: const EdgeInsets.only(right: 16.0, top: 8.0),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.85),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 6,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+      // 🔥 Removed the "actions" that had the extra white circle
       title: Text(
         widget.shop.name,
         style: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
-          fontSize: 18,
+          fontSize: 17,
         ),
       ),
       centerTitle: true,
       pinned: true,
-      expandedHeight: 150.0,
+      expandedHeight: 100.0,
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(
           fit: StackFit.expand,
@@ -119,7 +135,7 @@ class _SellerShopManagementScreenState
     return SliverToBoxAdapter(
       child: Container(
         margin:
-            const EdgeInsets.fromLTRB(16, 16, 16, 16), // Added bottom margin
+            const EdgeInsets.fromLTRB(16, 16, 16, 0), // Removed bottom margin
         padding: const EdgeInsets.all(16.0),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -142,7 +158,8 @@ class _SellerShopManagementScreenState
                     widget.shop.name,
                     style: Theme.of(context)
                         .textTheme
-                        .titleLarge
+                        // DECREASED TEXT STYLE from titleLarge to titleMedium
+                        .titleMedium
                         ?.copyWith(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -198,7 +215,8 @@ class _SellerShopManagementScreenState
               const SizedBox(height: 12),
               Text(
                 'Description',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      // DECREASED TEXT STYLE from titleSmall to labelLarge
                       fontWeight: FontWeight.w600,
                       color: Colors.grey.shade700,
                     ),
@@ -206,13 +224,96 @@ class _SellerShopManagementScreenState
               const SizedBox(height: 8),
               Text(
                 widget.shop.description ?? 'No description available.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      // DECREASED TEXT STYLE from bodyMedium to bodySmall
                       color: Colors.black87,
                       height: 1.5,
                     ),
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+
+  // NEW: Operational Status Toggle Buttons Widget
+  Widget _buildOperationalStatusToggle() {
+    // 0: Open, 1: Closed, 2: On Break
+    final isSelected = [
+      _operationalStatus == ShopAvailability.open,
+      _operationalStatus == ShopAvailability.closed,
+      _operationalStatus == ShopAvailability.onBreak,
+    ];
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+        child: Center(
+          child: ToggleButtons(
+            isSelected: isSelected,
+            onPressed: (int index) {
+              setState(() {
+                _operationalStatus = ShopAvailability.values[index];
+                // TEMPORARY: Print result for placeholder backend
+                print('Shop status changed to: ${_operationalStatus.name}');
+              });
+            },
+            borderRadius: BorderRadius.circular(10.0),
+            // UPDATED: Use dynamic color for selected border and fill
+            selectedBorderColor: _color,
+            fillColor: _fillColor,
+            selectedColor: _color,
+            color: Colors.grey.shade700,
+            constraints: const BoxConstraints(minHeight: 40.0, minWidth: 100.0),
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.check_circle_outline, size: 18),
+                    const SizedBox(width: 8),
+                    Text('Open',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color:
+                                isSelected[0] ? _color : Colors.grey.shade700)),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.cancel_outlined, size: 18),
+                    const SizedBox(width: 8),
+                    Text('Closed',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color:
+                                isSelected[1] ? _color : Colors.grey.shade700)),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.pause_circle_outline, size: 18),
+                    const SizedBox(width: 8),
+                    Text('On Break',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color:
+                                isSelected[2] ? _color : Colors.grey.shade700)),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -249,7 +350,8 @@ class _SellerShopManagementScreenState
         style: TextStyle(
           color: chipColor,
           fontWeight: FontWeight.bold,
-          fontSize: 11,
+          // Kept at 9, as it's already very small for a chip.
+          fontSize: 9,
         ),
       ),
       backgroundColor: chipColor.withOpacity(0.1),
@@ -268,6 +370,8 @@ class _SellerShopManagementScreenState
         slivers: [
           _buildSliverAppBar(context),
           _buildShopDetailsCard(),
+          // NEW: Operational Status Toggle Buttons added here
+          _buildOperationalStatusToggle(),
           // ✅ The selected page is rendered here, wrapped in a SliverFillRemaining
           // This allows the content (e.g., a list in MenuTab) to scroll correctly
           SliverFillRemaining(
@@ -304,6 +408,7 @@ class _SellerShopManagementScreenState
         // ✅ Aesthetic and functional properties
         selectedItemColor: AppTheme.primaryColor,
         unselectedItemColor: Colors.grey.shade600,
+        // The default label font size in BottomNavigationBar is usually small, so no change is explicitly needed here
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
         type: BottomNavigationBarType.fixed, // Good for 3-5 items
         items: const [
@@ -322,6 +427,12 @@ class _SellerShopManagementScreenState
             activeIcon: Icon(Icons.inventory_2),
             label: 'Stocks',
           ),
+          BottomNavigationBarItem(
+            // ADD THIS NEW ITEM
+            icon: Icon(Icons.reviews_outlined),
+            activeIcon: Icon(Icons.reviews),
+            label: 'Reviews',
+          )
         ],
       ),
     );

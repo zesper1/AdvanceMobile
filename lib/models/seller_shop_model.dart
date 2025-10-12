@@ -21,7 +21,7 @@ class SellerShop {
   final String openingTime;
   final String closingTime;
   final String category;
-  final int categoryId; // <-- ADD THIS
+  final int categoryId; // <-- added
   final double rating;
   final String? description;
   final String sellerId;
@@ -36,7 +36,7 @@ class SellerShop {
     required this.openingTime,
     required this.closingTime,
     required this.category,
-    required this.categoryId, // <-- ADD THIS
+    required this.categoryId, // <-- added
     required this.rating,
     this.description,
     required this.sellerId,
@@ -45,46 +45,78 @@ class SellerShop {
     required this.createdAt,
   });
 
-  // Factory constructor to create a SellerShop from a JSON map
-  // In models/seller_shop_model.dart
+  SellerShop copyWith({
+    String? id,
+    String? name,
+    String? imageUrl,
+    String? openingTime,
+    String? closingTime,
+    String? category,
+    int? categoryId,
+    double? rating,
+    String? description,
+    String? sellerId,
+    ShopStatus? status,
+    List<String>? customCategories,
+    DateTime? createdAt,
+  }) {
+    return SellerShop(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      imageUrl: imageUrl ?? this.imageUrl,
+      openingTime: openingTime ?? this.openingTime,
+      closingTime: closingTime ?? this.closingTime,
+      category: category ?? this.category,
+      categoryId: categoryId ?? this.categoryId,
+      rating: rating ?? this.rating,
+      description: description ?? this.description,
+      sellerId: sellerId ?? this.sellerId,
+      status: status ?? this.status,
+      customCategories: customCategories ?? this.customCategories,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 
-factory SellerShop.fromJson(Map<String, dynamic> json) {
-  return SellerShop(
-    // Safely convert id to string, providing a fallback if it's null.
-    id: json['id']?.toString() ?? '',
+  // Factory constructor to create a SellerShop from JSON
+  factory SellerShop.fromJson(Map<String, dynamic> json) {
+    return SellerShop(
+      // Safely convert id to string
+      id: json['id']?.toString() ?? '',
 
-    // Use `as String?` and provide a default value with `??`.
-    name: json['name'] as String? ?? 'Unnamed Shop',
+      // Safe string fields
+      name: json['name'] as String? ?? 'Unnamed Shop',
 
-    // This was already safe since imageUrl is nullable.
-    imageUrl: json['image_url'] as String ?? 'https://media.licdn.com/dms/image/v2/C560BAQHvjs3O4Utmdw/company-logo_200_200/company-logo_200_200/0/1631351760522?e=2147483647&v=beta&t=98Nb6ha1qF7VFgRtzDHP0WzmNbTlI_r26j4Q4rm3nMg',
+      // Nullable image URL with default fallback
+      imageUrl: json['image_url'] as String? ??
+          'https://media.licdn.com/dms/image/v2/C560BAQHvjs3O4Utmdw/company-logo_200_200/company-logo_200_200/0/1631351760522?e=2147483647&v=beta&t=98Nb6ha1qF7VFgRtzDHP0WzmNbTlI_r26j4Q4rm3nMg',
 
-    // Provide defaults for time strings.
-    openingTime: json['opening_time'] as String? ?? '00:00:00',
-    closingTime: json['closing_time'] as String? ?? '00:00:00',
-    
-    // Corrected key to 'category' and kept the null-safe logic.
-    category: json['category'] as String? ?? 'N/A', 
-    categoryId: json['category_id'] as int? ?? 0, // <-- ADD THIS with safe parsing
-    // Safely handle numbers that could be int or double.
-    rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
-    
-    // This was already safe since description is nullable.
-    description: json['description'] as String?,
-    
-    // sellerId is required, so a fallback prevents crashes but indicates a data issue.
-    sellerId: json['seller_id'] as String? ?? 'UNKNOWN_SELLER',
-    
-    // Safely parse the status, defaulting to 'pending'.
-    status: _parseShopStatus(json['status'] as String? ?? 'pending'),
-    
-    // This was already safe.
-    customCategories: List<String>.from(json['custom_categories'] ?? []),
-    
-    // Safely parse DateTime, defaulting to the current time if null.
-    createdAt: json['created_at'] == null
-        ? DateTime.now()
-        : DateTime.parse(json['created_at'] as String),
-  );
-}
+      // Default for times
+      openingTime: json['opening_time'] as String? ?? '00:00:00',
+      closingTime: json['closing_time'] as String? ?? '00:00:00',
+
+      // Category
+      category: json['category'] as String? ?? 'N/A',
+      categoryId: json['category_id'] as int? ?? 0,
+
+      // Rating handling
+      rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
+
+      // Optional description
+      description: json['description'] as String?,
+
+      // Required seller ID
+      sellerId: json['seller_id'] as String? ?? 'UNKNOWN_SELLER',
+
+      // Enum parsing
+      status: _parseShopStatus(json['status'] as String? ?? 'pending'),
+
+      // Custom categories list
+      customCategories: List<String>.from(json['custom_categories'] ?? []),
+
+      // Date parsing
+      createdAt: json['created_at'] == null
+          ? DateTime.now()
+          : DateTime.parse(json['created_at'] as String),
+    );
+  }
 }

@@ -4,12 +4,14 @@ import 'package:panot/providers/seller_shop_provider.dart';
 import '../../models/food_stall_model.dart';
 import '../../theme/app_theme.dart';
 import '../../screens/user/menu_screen.dart';
+import 'package:panot/services/shop_services.dart';
+import 'package:panot/models/shop_review_model.dart';
 
 class FoodStallCard extends ConsumerWidget {
   final FoodStall stall;
   final String cardType; // 'horizontal' or 'vertical'
   final bool showFavoriteButton;
-  
+
   // ✅ 2. Changed to be nullable. It's no longer required.
   final Set<int>? favoriteIds;
 
@@ -26,7 +28,8 @@ class FoodStallCard extends ConsumerWidget {
     // ✅ 3. Determine the live favorite status here, at the top level.
     // If favoriteIds is provided (user is logged in), use it.
     // Otherwise, fall back to the initial data from the `stall` model.
-    final bool isCurrentlyFavorite = favoriteIds?.contains(stall.id) ?? stall.isFavorite;
+    final bool isCurrentlyFavorite =
+        favoriteIds?.contains(stall.id) ?? stall.isFavorite;
 
     return GestureDetector(
       onTap: () {
@@ -38,7 +41,8 @@ class FoodStallCard extends ConsumerWidget {
   }
 
   // Helper methods now accept `isCurrentlyFavorite` to avoid re-calculating it.
-  Widget _buildCardContent(BuildContext context, WidgetRef ref, bool isCurrentlyFavorite) {
+  Widget _buildCardContent(
+      BuildContext context, WidgetRef ref, bool isCurrentlyFavorite) {
     if (cardType == 'vertical') {
       return _buildVerticalCard(context, ref, isCurrentlyFavorite);
     } else {
@@ -55,8 +59,11 @@ class FoodStallCard extends ConsumerWidget {
     );
   }
 
-  Future<void> _showFavoriteSuccessDialog(BuildContext context, WidgetRef ref, bool isCurrentlyFavorite) async {
-    ref.read(shopServiceProvider).toggleFavoriteStatus(stall.id, isCurrentlyFavorite);
+  Future<void> _showFavoriteSuccessDialog(
+      BuildContext context, WidgetRef ref, bool isCurrentlyFavorite) async {
+    ref
+        .read(shopServiceProvider)
+        .toggleFavoriteStatus(stall.id, isCurrentlyFavorite);
 
     // The rest of your dialog logic is great and remains the same.
     // It correctly only shows the dialog when adding a favorite.
@@ -128,7 +135,8 @@ class FoodStallCard extends ConsumerWidget {
   // --- Card Layout Builders ---
   // Pass `isCurrentlyFavorite` down to any widget that needs it.
 
-  Widget _buildVerticalCard(BuildContext context, WidgetRef ref, bool isCurrentlyFavorite) {
+  Widget _buildVerticalCard(
+      BuildContext context, WidgetRef ref, bool isCurrentlyFavorite) {
     return Container(
       // ... (decoration is unchanged)
       decoration: BoxDecoration(
@@ -175,7 +183,8 @@ class FoodStallCard extends ConsumerWidget {
                 Positioned(
                   top: 8,
                   right: 8,
-                  child: _buildFavoriteButton(context, ref, isCurrentlyFavorite), // Pass status
+                  child: _buildFavoriteButton(
+                      context, ref, isCurrentlyFavorite), // Pass status
                 ),
             ],
           ),
@@ -210,7 +219,8 @@ class FoodStallCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildHorizontalCard(BuildContext context, WidgetRef ref, bool isCurrentlyFavorite) {
+  Widget _buildHorizontalCard(
+      BuildContext context, WidgetRef ref, bool isCurrentlyFavorite) {
     return Container(
       // ... (decoration is unchanged)
       margin: const EdgeInsets.only(bottom: 8),
@@ -231,7 +241,8 @@ class FoodStallCard extends ConsumerWidget {
         children: [
           _buildImageWithOverlays(),
           Expanded(
-            child: _buildCardDetails(context, ref, isCurrentlyFavorite), // Pass status
+            child: _buildCardDetails(
+                context, ref, isCurrentlyFavorite), // Pass status
           ),
         ],
       ),
@@ -269,7 +280,8 @@ class FoodStallCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildCardDetails(BuildContext context, WidgetRef ref, bool isCurrentlyFavorite) {
+  Widget _buildCardDetails(
+      BuildContext context, WidgetRef ref, bool isCurrentlyFavorite) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Column(
@@ -290,7 +302,8 @@ class FoodStallCard extends ConsumerWidget {
                 ),
               ),
               if (showFavoriteButton)
-                _buildFavoriteButton(context, ref, isCurrentlyFavorite), // Pass status
+                _buildFavoriteButton(
+                    context, ref, isCurrentlyFavorite), // Pass status
             ],
           ),
           const SizedBox(height: 4),
@@ -307,7 +320,8 @@ class FoodStallCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildFavoriteButton(BuildContext context, WidgetRef ref, bool isCurrentlyFavorite) {
+  Widget _buildFavoriteButton(
+      BuildContext context, WidgetRef ref, bool isCurrentlyFavorite) {
     return GestureDetector(
       onTap: () async {
         await _showFavoriteSuccessDialog(context, ref, isCurrentlyFavorite);
@@ -328,7 +342,8 @@ class FoodStallCard extends ConsumerWidget {
         child: Icon(
           // ✅ 6. Use the live status to determine the icon's appearance.
           isCurrentlyFavorite ? Icons.favorite : Icons.favorite_border,
-          color: isCurrentlyFavorite ? Colors.redAccent : AppTheme.subtleTextColor,
+          color:
+              isCurrentlyFavorite ? Colors.redAccent : AppTheme.subtleTextColor,
           size: 16,
         ),
       ),
@@ -353,29 +368,70 @@ class FoodStallCard extends ConsumerWidget {
   }
 
   Widget _buildRatingBar() {
-    return Row(
-      children: [
-        Text(
-          stall.rating.toString(),
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: AppTheme.textColor,
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(width: 4),
-        ...List.generate(5, (index) {
-          return Icon(
-            index < stall.rating.floor()
-                ? Icons.star_rounded
-                : index < stall.rating
-                    ? Icons.star_half_rounded
-                    : Icons.star_border_rounded,
-            color: AppTheme.accentColor,
-            size: 14,
+    return FutureBuilder<List<ShopReview>>(
+      future: ShopService().fetchReviewsForShop(stall.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Row(
+            children: [
+              const SizedBox(
+                height: 14,
+                width: 14,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: 6),
+              const Text(
+                'Loading...',
+                style: TextStyle(fontSize: 11, color: Colors.grey),
+              ),
+            ],
           );
-        }),
-      ],
+        }
+
+        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+          return Row(
+            children: [
+              Icon(Icons.star_border_rounded,
+                  color: AppTheme.accentColor, size: 14),
+              const SizedBox(width: 4),
+              const Text(
+                'No ratings yet',
+                style: TextStyle(fontSize: 11, color: AppTheme.subtleTextColor),
+              ),
+            ],
+          );
+        }
+
+        final reviews = snapshot.data!;
+        final averageRating =
+            reviews.map((r) => r.rating).reduce((a, b) => a + b) /
+                reviews.length;
+
+        return Row(
+          children: [
+            Text(
+              averageRating.toStringAsFixed(1),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textColor,
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(width: 4),
+            ...List.generate(5, (index) {
+              return Icon(
+                index < averageRating.floor()
+                    ? Icons.star_rounded
+                    : index < averageRating
+                        ? Icons.star_half_rounded
+                        : Icons.star_border_rounded,
+                color: AppTheme.accentColor,
+                size: 14,
+              );
+            }),
+          ],
+        );
+      },
     );
   }
 }

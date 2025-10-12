@@ -17,8 +17,8 @@ class MenuItemCard extends ConsumerWidget {
     super.key,
     required this.item,
     this.showFavorite = true, // Default is true for customer view
-    this.onEdit,             // Optional callback for editing
-    this.onDelete,           // Optional callback for deleting
+    this.onEdit, // Optional callback for editing
+    this.onDelete, // Optional callback for deleting
   });
 
   @override
@@ -45,8 +45,10 @@ class MenuItemCard extends ConsumerWidget {
                     width: 80,
                     height: 80,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) =>
-                        const Icon(Icons.fastfood, size: 80, color: Colors.grey),
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.fastfood,
+                        size: 80,
+                        color: Colors.grey),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -59,14 +61,14 @@ class MenuItemCard extends ConsumerWidget {
                         item.name,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                          fontSize: 13,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         item.description,
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 10,
                           color: Colors.grey.shade600,
                         ),
                         maxLines: 2,
@@ -81,14 +83,15 @@ class MenuItemCard extends ConsumerWidget {
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               color: AppTheme.primaryColor,
-                              fontSize: 15,
+                              fontSize: 12,
                             ),
                           ),
                           Text(
                             'Stock: ${item.stock}',
                             style: TextStyle(
                               fontSize: 13,
-                              color: item.stock > 5 ? Colors.green : Colors.orange,
+                              color:
+                                  item.stock > 5 ? Colors.green : Colors.orange,
                               fontWeight: FontWeight.w500,
                             ),
                           ),

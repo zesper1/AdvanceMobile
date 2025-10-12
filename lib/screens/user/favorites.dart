@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/food_stall_model.dart';
 import '../../providers/food_stall_provider.dart';
-import '../../widgets/stalls/food_stall_card.dart';
+import '../../widgets/userwidgets/food_stall_card.dart';
 import '../../theme/app_theme.dart';
 
 class FavoritesScreen extends ConsumerStatefulWidget {
@@ -38,7 +38,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
       // This ensures you only build the complex UI when data is actually ready.
       body: favoriteShopsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Failed to load favorites: $err')),
+        error: (err, stack) =>
+            Center(child: Text('Failed to load favorites: $err')),
         data: (favoriteShops) {
           // ✅ 3. When data is available, build the full NestedScrollView UI.
           //    The 'favoriteShops' list is now passed directly to where it's needed.
@@ -82,7 +83,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
             ],
           ),
           child: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppTheme.primaryColor, size: 24),
+            icon: const Icon(Icons.arrow_back,
+                color: AppTheme.primaryColor, size: 24),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
@@ -92,7 +94,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
         style: TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
-          fontSize: 15,
+          fontSize: 17,
         ),
       ),
       centerTitle: true,
@@ -117,7 +119,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: Colors.transparent,
         labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400, fontSize: 12),
+        unselectedLabelStyle:
+            const TextStyle(fontWeight: FontWeight.w400, fontSize: 12),
         // This container adds padding and decoration AROUND the TabBar.
         indicatorPadding: const EdgeInsets.all(4.0),
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -158,7 +161,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Row(
               children: [
-                Icon(Icons.storefront_rounded, color: AppTheme.primaryColor, size: 16),
+                Icon(Icons.storefront_rounded,
+                    color: AppTheme.primaryColor, size: 16),
                 const SizedBox(width: 8),
                 Text(
                   '${favoriteShops.length} Favorite Shop${favoriteShops.length > 1 ? 's' : ''}',
@@ -194,85 +198,91 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
       ),
     );
   }
-  
+
   // The rest of your methods (_buildFoodSection, _buildEmptyState) are unchanged.
   Widget _buildFoodSection() {
-     return _buildEmptyState(
-       icon: Icons.restaurant_menu_rounded,
-       title: 'Food Favorites Coming Soon',
-       subtitle: 'This feature will be available in the next major update!',
-       actionText: 'Explore Shops',
-       onAction: () {
-         _tabController.animateTo(0);
-       },
-     );
-   }
-   
-  Widget _buildEmptyState({ required IconData icon, required String title, required String subtitle, String? actionText, VoidCallback? onAction,}) {
-     return Center(
-       child: SingleChildScrollView(
-         padding: const EdgeInsets.all(32.0),
-         child: Column(
-           mainAxisAlignment: MainAxisAlignment.center,
-           children: [
-             Container(
-               width: 60,
-               height: 60,
-               decoration: BoxDecoration(
-                 color: AppTheme.primaryColor.withOpacity(0.12),
-                 shape: BoxShape.circle,
-               ),
-               child: Icon(
-                 icon,
-                 size: 28,
-                 color: AppTheme.primaryColor,
-               ),
-             ),
-             const SizedBox(height: 16),
-             Text(
-               title,
-               textAlign: TextAlign.center,
-               style: const TextStyle(
-                 fontSize: 15,
-                 fontWeight: FontWeight.w700,
-                 color: AppTheme.textColor,
-               ),
-             ),
-             const SizedBox(height: 8),
-             Text(
-               subtitle,
-               textAlign: TextAlign.center,
-               style: TextStyle(
-                 fontSize: 11,
-                 color: AppTheme.subtleTextColor,
-                 height: 1.4,
-               ),
-             ),
-             if (actionText != null && onAction != null) ...[
-               const SizedBox(height: 18),
-               ElevatedButton.icon(
-                 onPressed: onAction,
-                 icon: const Icon(Icons.storefront_rounded, size: 14),
-                 label: Text(
-                   actionText,
-                   style: const TextStyle(
-                       fontSize: 11, fontWeight: FontWeight.w500),
-                 ),
-                 style: ElevatedButton.styleFrom(
-                   backgroundColor: AppTheme.primaryColor,
-                   foregroundColor: Colors.white,
-                   shape: RoundedRectangleBorder(
-                     borderRadius: BorderRadius.circular(30),
-                   ),
-                   padding:
-                       const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
-                   elevation: 4,
-                 ),
-               ),
-             ],
-           ],
-         ),
-       ),
-     );
-   }
+    return _buildEmptyState(
+      icon: Icons.restaurant_menu_rounded,
+      title: 'Food Favorites Coming Soon',
+      subtitle: 'This feature will be available in the next major update!',
+      actionText: 'Explore Shops',
+      onAction: () {
+        _tabController.animateTo(0);
+      },
+    );
+  }
+
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    String? actionText,
+    VoidCallback? onAction,
+  }) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                size: 28,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11,
+                color: AppTheme.subtleTextColor,
+                height: 1.4,
+              ),
+            ),
+            if (actionText != null && onAction != null) ...[
+              const SizedBox(height: 18),
+              ElevatedButton.icon(
+                onPressed: onAction,
+                icon: const Icon(Icons.storefront_rounded, size: 14),
+                label: Text(
+                  actionText,
+                  style: const TextStyle(
+                      fontSize: 11, fontWeight: FontWeight.w500),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
+                  elevation: 4,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }
