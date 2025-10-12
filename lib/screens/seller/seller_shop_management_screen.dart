@@ -2,17 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:panot/screens/seller/widgets/add_product_dialog.dart';
 import '../../models/seller_shop_model.dart';
+import '../../providers/seller_shop_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../screens/seller/widgets/menu_tab.dart';
 import '../../screens/seller/widgets/details_tab.dart';
 import '../../screens/seller/widgets/stock_tab.dart';
-import '../../screens/seller/widgets/reviewstab.dart'; // ADD THIS IMPORT
-
-// The enum is no longer needed for navigation state
-// enum ManagementTab { menu, details, stocks }
-
-// MODIFIED: Renamed the temporary enum for the operational status
-enum ShopAvailability { open, closed, onBreak }
+import '../../screens/seller/widgets/reviewstab.dart';
 
 class SellerShopManagementScreen extends ConsumerStatefulWidget {
   final SellerShop shop;
@@ -25,15 +20,9 @@ class SellerShopManagementScreen extends ConsumerStatefulWidget {
 
 class _SellerShopManagementScreenState
     extends ConsumerState<SellerShopManagementScreen> {
-  // ✅ 1. State is now managed by an integer index
   int _selectedIndex = 0;
   bool _showAdditionalDetails = false;
 
-  // TEMPORARY: State for the Operational Status, using the new enum
-  // Initial state is Open for demonstration
-  ShopAvailability _operationalStatus = ShopAvailability.open;
-
-  // ✅ Define the pages to be switched
   late final List<Widget> _pages;
 
   @override
@@ -47,31 +36,32 @@ class _SellerShopManagementScreenState
     ];
   }
 
-  // NEW: Dynamic color getter for the selected toggle button
-  Color get _color {
-    switch (_operationalStatus) {
-      case ShopAvailability.open:
+  // ✅ 1. RESTORED HELPER METHODS with 'OnBreak'
+  Color _getColor(ShopAvailabilityStatus? status) {
+    switch (status) {
+      case ShopAvailabilityStatus.Open:
         return Colors.green.shade600;
-      case ShopAvailability.closed:
-        return Colors.red.shade600;
-      case ShopAvailability.onBreak:
+      case ShopAvailabilityStatus.OnBreak:
         return Colors.orange.shade700;
+      case ShopAvailabilityStatus.Closed:
+      default: // Handles null and Closed cases
+        return Colors.red.shade600;
     }
   }
 
-  // NEW: Dynamic light fill color getter for the selected toggle button
-  Color get _fillColor {
-    switch (_operationalStatus) {
-      case ShopAvailability.open:
+  Color _getFillColor(ShopAvailabilityStatus? status) {
+    switch (status) {
+      case ShopAvailabilityStatus.Open:
         return Colors.green.shade100;
-      case ShopAvailability.closed:
-        return Colors.red.shade100;
-      case ShopAvailability.onBreak:
+      case ShopAvailabilityStatus.OnBreak:
         return Colors.orange.shade100;
+      case ShopAvailabilityStatus.Closed:
+      default: // Handles null and Closed cases
+        return Colors.red.shade100;
     }
   }
 
-  // SliverAppBar for the management screen (no changes needed here)
+  // ... (SliverAppBar, _buildBackgroundImage, _buildShopDetailsCard, and _buildStatusChip methods are unchanged)
   Widget _buildSliverAppBar(BuildContext context) {
     return SliverAppBar(
       leading: Padding(
@@ -95,7 +85,6 @@ class _SellerShopManagementScreenState
           ),
         ),
       ),
-      // 🔥 Removed the "actions" that had the extra white circle
       title: Text(
         widget.shop.name,
         style: const TextStyle(
@@ -130,12 +119,11 @@ class _SellerShopManagementScreenState
     );
   }
 
-  /// Compact shop details card with expandable section (no changes needed here)
-  Widget _buildShopDetailsCard() {
+  Widget _buildShopDetailsCard(SellerShop currentShop) {
     return SliverToBoxAdapter(
       child: Container(
         margin:
-            const EdgeInsets.fromLTRB(16, 16, 16, 0), // Removed bottom margin
+            const EdgeInsets.fromLTRB(16, 16, 16, 0),
         padding: const EdgeInsets.all(16.0),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -155,10 +143,9 @@ class _SellerShopManagementScreenState
               children: [
                 Expanded(
                   child: Text(
-                    widget.shop.name,
+                    currentShop.name,
                     style: Theme.of(context)
                         .textTheme
-                        // DECREASED TEXT STYLE from titleLarge to titleMedium
                         .titleMedium
                         ?.copyWith(fontWeight: FontWeight.bold),
                   ),
@@ -184,14 +171,14 @@ class _SellerShopManagementScreenState
                     color: Colors.grey.shade600, size: 16),
                 const SizedBox(width: 6),
                 Text(
-                  widget.shop.category,
+                  currentShop.category,
                   style: TextStyle(
                     color: Colors.grey.shade600,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(width: 16),
-                _buildStatusChip(widget.shop.status),
+                _buildStatusChip(currentShop.status),
               ],
             ),
             const SizedBox(height: 12),
@@ -201,7 +188,7 @@ class _SellerShopManagementScreenState
                     color: Colors.grey.shade600, size: 16),
                 const SizedBox(width: 6),
                 Text(
-                  '${widget.shop.openingTime} - ${widget.shop.closingTime}',
+                  '${currentShop.openingTime} - ${currentShop.closingTime}',
                   style: TextStyle(
                     color: Colors.grey.shade600,
                     fontWeight: FontWeight.w500,
@@ -216,16 +203,14 @@ class _SellerShopManagementScreenState
               Text(
                 'Description',
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      // DECREASED TEXT STYLE from titleSmall to labelLarge
                       fontWeight: FontWeight.w600,
                       color: Colors.grey.shade700,
                     ),
               ),
               const SizedBox(height: 8),
               Text(
-                widget.shop.description ?? 'No description available.',
+                currentShop.description ?? 'No description available.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      // DECREASED TEXT STYLE from bodyMedium to bodySmall
                       color: Colors.black87,
                       height: 1.5,
                     ),
@@ -237,14 +222,16 @@ class _SellerShopManagementScreenState
     );
   }
 
-  // NEW: Operational Status Toggle Buttons Widget
-  Widget _buildOperationalStatusToggle() {
-    // 0: Open, 1: Closed, 2: On Break
+  // ✅ 2. UPDATED TOGGLE WIDGET with three options
+  Widget _buildOperationalStatusToggle(SellerShop currentShop) {
     final isSelected = [
-      _operationalStatus == ShopAvailability.open,
-      _operationalStatus == ShopAvailability.closed,
-      _operationalStatus == ShopAvailability.onBreak,
+      currentShop.availabilityStatus == ShopAvailabilityStatus.Open,
+      currentShop.availabilityStatus == ShopAvailabilityStatus.Closed,
+      currentShop.availabilityStatus == ShopAvailabilityStatus.OnBreak,
     ];
+
+    final color = _getColor(currentShop.availabilityStatus);
+    final fillColor = _getFillColor(currentShop.availabilityStatus);
 
     return SliverToBoxAdapter(
       child: Padding(
@@ -253,64 +240,40 @@ class _SellerShopManagementScreenState
           child: ToggleButtons(
             isSelected: isSelected,
             onPressed: (int index) {
-              setState(() {
-                _operationalStatus = ShopAvailability.values[index];
-                // TEMPORARY: Print result for placeholder backend
-                print('Shop status changed to: ${_operationalStatus.name}');
-              });
+              // The index directly maps to the enum order
+              final newStatus = ShopAvailabilityStatus.values[index];
+
+              if (newStatus == currentShop.availabilityStatus) return;
+
+              ref.read(sellerShopProvider.notifier).updateShopAvailability(
+                    shopId: currentShop.id,
+                    newStatus: newStatus,
+                  );
             },
             borderRadius: BorderRadius.circular(10.0),
-            // UPDATED: Use dynamic color for selected border and fill
-            selectedBorderColor: _color,
-            fillColor: _fillColor,
-            selectedColor: _color,
+            selectedBorderColor: color,
+            fillColor: fillColor,
+            selectedColor: color,
             color: Colors.grey.shade700,
             constraints: const BoxConstraints(minHeight: 40.0, minWidth: 100.0),
             children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.check_circle_outline, size: 18),
-                    const SizedBox(width: 8),
-                    Text('Open',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color:
-                                isSelected[0] ? _color : Colors.grey.shade700)),
-                  ],
-                ),
+              _buildToggleButtonChild(
+                icon: Icons.check_circle_outline,
+                label: 'Open',
+                isSelected: isSelected[0],
+                color: _getColor(ShopAvailabilityStatus.Open),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.cancel_outlined, size: 18),
-                    const SizedBox(width: 8),
-                    Text('Closed',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color:
-                                isSelected[1] ? _color : Colors.grey.shade700)),
-                  ],
-                ),
+              _buildToggleButtonChild(
+                icon: Icons.cancel_outlined,
+                label: 'Closed',
+                isSelected: isSelected[1],
+                color: _getColor(ShopAvailabilityStatus.Closed),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.pause_circle_outline, size: 18),
-                    const SizedBox(width: 8),
-                    Text('On Break',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color:
-                                isSelected[2] ? _color : Colors.grey.shade700)),
-                  ],
-                ),
+              _buildToggleButtonChild(
+                icon: Icons.pause_circle_outline,
+                label: 'On Break',
+                isSelected: isSelected[2],
+                color: _getColor(ShopAvailabilityStatus.OnBreak),
               ),
             ],
           ),
@@ -319,7 +282,30 @@ class _SellerShopManagementScreenState
     );
   }
 
-  // Helper widget to create a colored chip for the shop status
+  // Helper for toggle button children. No changes needed here.
+  Widget _buildToggleButtonChild({
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    required Color color,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 18),
+          const SizedBox(width: 8),
+          Text(label,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: isSelected ? color : Colors.grey.shade700,
+              )),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStatusChip(ShopStatus status) {
     Color chipColor;
     String label;
@@ -350,7 +336,6 @@ class _SellerShopManagementScreenState
         style: TextStyle(
           color: chipColor,
           fontWeight: FontWeight.bold,
-          // Kept at 9, as it's already very small for a chip.
           fontSize: 9,
         ),
       ),
@@ -363,32 +348,38 @@ class _SellerShopManagementScreenState
 
   @override
   Widget build(BuildContext context) {
-    // ✅ 2. The main layout is simplified to a Scaffold with a BottomNavigationBar
+    final asyncSellerShops = ref.watch(sellerShopProvider);
+
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
-      body: CustomScrollView(
-        slivers: [
-          _buildSliverAppBar(context),
-          _buildShopDetailsCard(),
-          // NEW: Operational Status Toggle Buttons added here
-          _buildOperationalStatusToggle(),
-          // ✅ The selected page is rendered here, wrapped in a SliverFillRemaining
-          // This allows the content (e.g., a list in MenuTab) to scroll correctly
-          SliverFillRemaining(
-            hasScrollBody:
-                true, // Set to true if your tabs have scrollable lists
-            child: _pages[_selectedIndex],
-          ),
-        ],
+      body: asyncSellerShops.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(child: Text('Error: $err')),
+        data: (shopList) {
+          final currentShop = shopList.firstWhere(
+            (s) => s.id == widget.shop.id,
+            orElse: () => widget.shop,
+          );
+
+          return CustomScrollView(
+            slivers: [
+              _buildSliverAppBar(context),
+              _buildShopDetailsCard(currentShop),
+              _buildOperationalStatusToggle(currentShop),
+              SliverFillRemaining(
+                hasScrollBody: true,
+                child: _pages[_selectedIndex],
+              ),
+            ],
+          );
+        },
       ),
-      // MODIFIED: Added the FloatingActionButton
-      floatingActionButton: _selectedIndex == 0 // Only show FAB on the Menu tab
+      floatingActionButton: _selectedIndex == 0
           ? FloatingActionButton(
               onPressed: () {
                 showDialog(
                   context: context,
                   builder: (context) => AddProductDialog(
-                    // Parse the shop ID from String to int
                     shopId: int.parse(widget.shop.id),
                   ),
                 );
@@ -398,19 +389,16 @@ class _SellerShopManagementScreenState
             )
           : null,
       bottomNavigationBar: BottomNavigationBar(
-        // ✅ 3. This is the new navigation widget
         currentIndex: _selectedIndex,
         onTap: (index) {
           setState(() {
             _selectedIndex = index;
           });
         },
-        // ✅ Aesthetic and functional properties
         selectedItemColor: AppTheme.primaryColor,
         unselectedItemColor: Colors.grey.shade600,
-        // The default label font size in BottomNavigationBar is usually small, so no change is explicitly needed here
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-        type: BottomNavigationBarType.fixed, // Good for 3-5 items
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.restaurant_menu_outlined),
@@ -428,7 +416,6 @@ class _SellerShopManagementScreenState
             label: 'Stocks',
           ),
           BottomNavigationBarItem(
-            // ADD THIS NEW ITEM
             icon: Icon(Icons.reviews_outlined),
             activeIcon: Icon(Icons.reviews),
             label: 'Reviews',

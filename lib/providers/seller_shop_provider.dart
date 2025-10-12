@@ -4,9 +4,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:panot/models/notification_model.dart';
 import 'package:panot/models/shop_subcategory.dart';
 import 'package:panot/providers/notification_provider.dart';
-import 'package:panot/services/admin_services.dart';
 import 'package:panot/services/shop_services.dart';
 import '../models/seller_shop_model.dart';
+import 'package:collection/collection.dart'; // ✅ Add this line
 
 // Provider for the ShopService dependency
 final shopServiceProvider = Provider<ShopService>((ref) => ShopService());
@@ -134,6 +134,25 @@ class SellerShopNotifier extends AutoDisposeAsyncNotifier<List<SellerShop>> {
       return ref.read(shopServiceProvider).getSellerShops();
     });
   }
+  // ✅ NEW METHOD TO UPDATE AVAILABILITY STATUS
+  Future<void> updateShopAvailability({
+    required String shopId,
+    required ShopAvailabilityStatus newStatus,
+  }) async {
+    // 1. Set the state to loading to show a spinner in the UI
+    state = const AsyncValue.loading();
+
+    // 2. Use AsyncValue.guard to handle potential errors gracefully
+    state = await AsyncValue.guard(() async {
+      // Call the service to update the database
+      await ref.read(shopServiceProvider).updateShopAvailability(
+            shopId: shopId,
+            newStatus: newStatus.name,
+          );
+
+      return ref.read(shopServiceProvider).getSellerShops();
+    });
+  }
 }
 
 // This brace correctly closes the SellerShopNotifier class.
@@ -179,5 +198,16 @@ final shopSubcategoriesProvider =
     return ref.watch(shopServiceProvider).getShopSubcategories(shopId);
   },
 );
+final singleSellerShopProvider =
+    Provider.autoDispose.family<SellerShop?, String>((ref, shopId) {
 
+  // Watch the state of the main provider that fetches all shops
+  final allShopsAsyncValue = ref.watch(sellerShopProvider);
+
+  // When the main provider has data, search for the specific shop by its ID
+  return allShopsAsyncValue.whenData((shops) {
+    // Use firstWhereOrNull for safety. It returns null if no shop is found.
+    return shops.firstWhereOrNull((shop) => shop.id == shopId);
+  }).value; // .value extracts the data, or returns null if loading/error
+});
 // The extra closing brace that caused the error has been removed from here.

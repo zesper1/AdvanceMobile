@@ -15,6 +15,7 @@ class DetailsTab extends ConsumerStatefulWidget {
 }
 
 class _DetailsTabState extends ConsumerState<DetailsTab> {
+  // --- STATE VARIABLES ---
   late TextEditingController _nameController;
   late TextEditingController _descriptionController;
   late TextEditingController _openingTimeController;
@@ -23,9 +24,10 @@ class _DetailsTabState extends ConsumerState<DetailsTab> {
   late int _selectedCategoryId;
   bool _isEditing = false;
 
-  // 🆕 Add this list to store selected subcategories
   List<Subcategory> _selectedSubcategories = [];
+  bool _subcategoriesInitialized = false;
 
+  // --- LIFECYCLE METHODS ---
   @override
   void initState() {
     super.initState();
@@ -37,11 +39,6 @@ class _DetailsTabState extends ConsumerState<DetailsTab> {
     _closingTimeController =
         TextEditingController(text: widget.shop.closingTime);
     _selectedCategoryId = widget.shop.categoryId;
-
-    // 🆕 Preload seller’s existing subcategories
-    if (widget.shop.customCategories.isNotEmpty) {
-      // The model uses strings, we’ll map them later after fetching subs
-    }
   }
 
   @override
@@ -53,6 +50,312 @@ class _DetailsTabState extends ConsumerState<DetailsTab> {
     super.dispose();
   }
 
+  // --- DATA HANDLING ---
+  /// ✅ THIS METHOD IS NOW UPDATED
+  Future<void> _saveChanges() async {
+    final openTimeParts = _openingTimeController.text.split(':');
+    final closeTimeParts = _closingTimeController.text.split(':');
+
+    final openingTime = TimeOfDay(
+      hour: int.tryParse(openTimeParts[0]) ?? 0,
+      minute: int.tryParse(openTimeParts[1]) ?? 0,
+    );
+    final closingTime = TimeOfDay(
+      hour: int.tryParse(closeTimeParts[0]) ?? 0,
+      minute: int.tryParse(closeTimeParts[1]) ?? 0,
+    );
+
+    // Get the list of subcategory IDs from the local state
+    final List<int> subcategoryIds =
+        _selectedSubcategories.map((sub) => sub.id).toList();
+
+    try {
+      // Call the comprehensive 'updateShop' method from the provider
+      await ref.read(sellerShopProvider.notifier).updateShop(
+            shopId: widget.shop.id, // The ID is already a String
+            shopName: _nameController.text,
+            description: _descriptionController.text,
+            newImageFile: null, // This screen doesn't handle image updates
+            openingTime: openingTime,
+            closingTime: closingTime,
+            categoryId: _selectedCategoryId,
+            subcategoryIds: subcategoryIds, // Pass the list of IDs
+          );
+
+      setState(() {
+        _isEditing = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Shop details updated successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating shop: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+
+  // --- UI BUILD METHODS ---
+  @override
+  Widget build(BuildContext context) {
+    final shopData = ref.watch(singleSellerShopProvider(widget.shop.id)) ?? widget.shop;
+
+    if (!_isEditing) {
+      _nameController.text = shopData.name;
+      _descriptionController.text = shopData.description ?? '';
+      _openingTimeController.text = shopData.openingTime;
+      _closingTimeController.text = shopData.closingTime;
+      _selectedCategoryId = shopData.categoryId;
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Card(
+            elevation: 2,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Shop Information',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      IconButton(
+                        icon: Icon(_isEditing ? Icons.save : Icons.edit,
+                            size: 20, color: AppTheme.primaryColor),
+                        onPressed: () {
+                          setState(() {
+                            if (_isEditing) {
+                              _saveChanges();
+                            } else {
+                              _isEditing = true;
+                              _subcategoriesInitialized = false;
+                            }
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _buildEditableField(
+                      label: 'Shop Name',
+                      controller: _nameController,
+                      icon: Icons.store),
+                  _buildCategorySection(shopData),
+                  const SizedBox(height: 8),
+                  _buildSubcategorySection(shopData),
+                  const SizedBox(height: 16),
+                  _buildEditableField(
+                      label: 'Description',
+                      controller: _descriptionController,
+                      icon: Icons.description,
+                      maxLines: 3),
+                  _buildTimeField(
+                      label: 'Opening Time',
+                      controller: _openingTimeController,
+                      icon: Icons.access_time),
+                  _buildTimeField(
+                      label: 'Closing Time',
+                      controller: _closingTimeController,
+                      icon: Icons.access_time),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// This widget handles all the interactive UI logic for subcategories.
+  Widget _buildSubcategorySection(SellerShop currentShop) {
+    final subcategoriesAsync =
+        ref.watch(subcategoriesProvider(_selectedCategoryId));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Subcategories',
+          style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+              fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 6),
+        subcategoriesAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, _) => Text('Error loading subcategories: $err', style: const TextStyle(color: Colors.red)),
+          data: (availableSubcategories) {
+            if (_isEditing && !_subcategoriesInitialized) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                 if(mounted) {
+                   setState(() {
+                    _selectedSubcategories = availableSubcategories
+                        .where((sub) => currentShop.customCategories.contains(sub.name))
+                        .toList();
+                    _subcategoriesInitialized = true;
+                  });
+                 }
+              });
+            }
+
+            if (!_isEditing) {
+              if (currentShop.customCategories.isEmpty) {
+                return const Text('No subcategories set.',
+                    style: TextStyle(fontSize: 13, color: Colors.grey));
+              }
+              return Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: currentShop.customCategories
+                    .map((name) => Chip(
+                          label: Text(name, style: const TextStyle(fontSize: 12)),
+                          backgroundColor: Colors.grey.shade200,
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ))
+                    .toList(),
+              );
+            }
+
+            return Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: availableSubcategories.map((sub) {
+                final isSelected =
+                    _selectedSubcategories.any((s) => s.id == sub.id);
+
+                return FilterChip(
+                  label: Text(sub.name,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected ? AppTheme.primaryColor : Colors.black87,
+                      )),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setState(() {
+                      if (selected) {
+                        _selectedSubcategories.add(sub);
+                      } else {
+                        _selectedSubcategories.removeWhere((s) => s.id == sub.id);
+                      }
+                    });
+                  },
+                  backgroundColor: Colors.grey.shade100,
+                  selectedColor: AppTheme.primaryColor.withOpacity(0.2),
+                  checkmarkColor: AppTheme.primaryColor,
+                  shape: StadiumBorder(
+                      side: BorderSide(
+                          color: isSelected
+                              ? AppTheme.primaryColor
+                              : Colors.grey.shade300)),
+                );
+              }).toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  /// Helper to build the category dropdown/display
+  Widget _buildCategorySection(SellerShop currentShop) {
+    final categoriesAsync = ref.watch(categoriesProvider);
+    return categoriesAsync.when(
+        loading: () => const SizedBox.shrink(),
+        error: (err, stack) => Text('Error: $err'),
+        data: (allCategories) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Category',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w500)),
+                const SizedBox(height: 4),
+                _isEditing
+                    ? Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: DropdownButtonFormField<int>(
+                          value: _selectedCategoryId,
+                          isExpanded: true,
+                          decoration:
+                              const InputDecoration(border: InputBorder.none),
+                          style: const TextStyle(
+                              fontSize: 13, color: AppTheme.textColor),
+                          items: allCategories.map((Category category) {
+                            return DropdownMenuItem<int>(
+                              value: category.id,
+                              child: Text(category.name),
+                            );
+                          }).toList(),
+                          onChanged: (int? newValue) {
+                            if (newValue != null &&
+                                newValue != _selectedCategoryId) {
+                              setState(() {
+                                _selectedCategoryId = newValue;
+                                _selectedSubcategories = [];
+                                _subcategoriesInitialized = false;
+                              });
+                            }
+                          },
+                          validator: (value) =>
+                              value == null ? 'Please select a category' : null,
+                        ),
+                      )
+                    : Row(
+                        children: [
+                          const Icon(Icons.category,
+                              size: 18, color: AppTheme.primaryColor),
+                          const SizedBox(width: 8),
+                          Text(
+                            currentShop.category,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppTheme.textColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+              ],
+            ),
+          );
+        });
+  }
+
+  // --- HELPER METHODS (Unchanged) ---
   String _formatTimeOfDay(TimeOfDay time) {
     final hour = time.hour.toString().padLeft(2, '0');
     final minute = time.minute.toString().padLeft(2, '0');
@@ -83,209 +386,6 @@ class _DetailsTabState extends ConsumerState<DetailsTab> {
         controller.text = _formatTimeOfDay(pickedTime);
       });
     }
-  }
-
-  Future<void> _saveChanges() async {
-    final openTimeParts = _openingTimeController.text.split(':');
-    final closeTimeParts = _closingTimeController.text.split(':');
-
-    final openingTime = TimeOfDay(
-      hour: int.tryParse(openTimeParts[0]) ?? 0,
-      minute: int.tryParse(openTimeParts[1]) ?? 0,
-    );
-    final closingTime = TimeOfDay(
-      hour: int.tryParse(closeTimeParts[0]) ?? 0,
-      minute: int.tryParse(closeTimeParts[1]) ?? 0,
-    );
-
-    try {
-      // ✅ Save normal shop details
-      await ref.read(sellerShopProvider.notifier).updateBasicShopDetails(
-            shopId: int.parse(widget.shop.id),
-            shopName: _nameController.text,
-            description: _descriptionController.text,
-            categoryId: _selectedCategoryId,
-            openingTime: openingTime,
-            closingTime: closingTime,
-          );
-
-      // ✅ Create a new updated shop (instead of mutating widget.shop)
-      final updatedShop = widget.shop.copyWith(
-        customCategories: _selectedSubcategories.map((s) => s.name).toList(),
-      );
-
-      // ✅ Optionally update local state or provider
-
-      setState(() {
-        _isEditing = false;
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Shop details updated successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final categoriesAsync = ref.watch(categoriesProvider);
-
-    // 🆕 Watch subcategories of selected category
-    final subcategoriesAsync =
-        ref.watch(subcategoriesProvider(_selectedCategoryId));
-
-    return categoriesAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) =>
-            Center(child: Text('Error: Could not load categories. $err')),
-        data: (allCategories) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Shop Information',
-                              style: TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.bold),
-                            ),
-                            IconButton(
-                              icon: Icon(_isEditing ? Icons.save : Icons.edit,
-                                  size: 20, color: AppTheme.primaryColor),
-                              onPressed: () {
-                                setState(() {
-                                  if (_isEditing) {
-                                    _saveChanges();
-                                  } else {
-                                    _isEditing = true;
-                                  }
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        _buildEditableField(
-                            label: 'Shop Name',
-                            controller: _nameController,
-                            icon: Icons.store),
-                        _buildCategorySection(allCategories),
-
-                        // 🆕 Subcategory Section Below Category
-                        const SizedBox(height: 8),
-                        subcategoriesAsync.when(
-                          loading: () =>
-                              const Center(child: CircularProgressIndicator()),
-                          error: (err, _) =>
-                              Text('Error loading subcategories: $err'),
-                          data: (subcategories) {
-                            // Preload saved subs only once
-                            if (_selectedSubcategories.isEmpty &&
-                                widget.shop.customCategories.isNotEmpty) {
-                              _selectedSubcategories = subcategories
-                                  .where((s) => widget.shop.customCategories
-                                      .contains(s.name))
-                                  .toList();
-                            }
-
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Subcategories',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey,
-                                      fontWeight: FontWeight.w500),
-                                ),
-                                const SizedBox(height: 6),
-                                _isEditing
-                                    ? Wrap(
-                                        spacing: 8,
-                                        runSpacing: 4,
-                                        children: subcategories.map((sub) {
-                                          final isSelected =
-                                              _selectedSubcategories
-                                                  .any((s) => s.id == sub.id);
-                                          return FilterChip(
-                                            label: Text(sub.name),
-                                            selected: isSelected,
-                                            onSelected: (selected) {
-                                              setState(() {
-                                                if (selected) {
-                                                  _selectedSubcategories
-                                                      .add(sub);
-                                                } else {
-                                                  _selectedSubcategories
-                                                      .removeWhere((s) =>
-                                                          s.id == sub.id);
-                                                }
-                                              });
-                                            },
-                                          );
-                                        }).toList(),
-                                      )
-                                    : Wrap(
-                                        spacing: 8,
-                                        runSpacing: 4,
-                                        children: widget.shop.customCategories
-                                            .map((name) =>
-                                                Chip(label: Text(name)))
-                                            .toList(),
-                                      ),
-                              ],
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 16),
-
-                        _buildEditableField(
-                            label: 'Description',
-                            controller: _descriptionController,
-                            icon: Icons.description,
-                            maxLines: 3),
-                        _buildTimeField(
-                            label: 'Opening Time',
-                            controller: _openingTimeController,
-                            icon: Icons.access_time),
-                        _buildTimeField(
-                            label: 'Closing Time',
-                            controller: _closingTimeController,
-                            icon: Icons.access_time),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        });
   }
 
   Widget _buildEditableField({
@@ -368,73 +468,6 @@ class _DetailsTabState extends ConsumerState<DetailsTab> {
       controller: controller,
       icon: icon,
       readOnly: true,
-    );
-  }
-
-  Widget _buildCategorySection(List<Category> allCategories) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Category',
-              style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                  fontWeight: FontWeight.w500)),
-          const SizedBox(height: 4),
-          _isEditing
-              ? Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: DropdownButtonFormField<int>(
-                    value: _selectedCategoryId,
-                    isExpanded: true,
-                    decoration: const InputDecoration(border: InputBorder.none),
-                    style: const TextStyle(
-                        fontSize: 13, color: AppTheme.textColor),
-                    items: allCategories.map((Category category) {
-                      return DropdownMenuItem<int>(
-                        value: category.id,
-                        child: Text(category.name),
-                      );
-                    }).toList(),
-                    onChanged: (int? newValue) {
-                      if (newValue != null) {
-                        setState(() {
-                          _selectedCategoryId = newValue;
-                          _selectedSubcategories = []; // 🆕 reset
-                        });
-                      }
-                    },
-                    validator: (value) =>
-                        value == null ? 'Please select a category' : null,
-                  ),
-                )
-              : Row(
-                  children: [
-                    const Icon(Icons.category,
-                        size: 18, color: AppTheme.primaryColor),
-                    const SizedBox(width: 8),
-                    Text(
-                      allCategories
-                          .firstWhere((c) => c.id == _selectedCategoryId,
-                              orElse: () => Category(id: -1, name: "Unknown"))
-                          .name,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: AppTheme.textColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-        ],
-      ),
     );
   }
 }
