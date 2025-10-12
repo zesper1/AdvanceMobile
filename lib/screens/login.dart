@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:panot/providers/auth_provider.dart';
+import 'package:panot/screens/forgot_password_screen.dart';
 import '../screens/user/user_shops_screen.dart'; // This will eventually be replaced by the splash screen's logic
 import '../theme/app_theme.dart';
 import '../screens/user/user_shops_screen.dart';
@@ -121,7 +122,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
         ),
         const SizedBox(height: 24),
-        const RoleDropdown(),
         const SizedBox(height: 16),
         TextField(
           controller: _emailController,
@@ -165,6 +165,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               MaterialPageRoute(builder: (context) => const RegisterScreen()),
             );
           },
+        ),
+         // ✅ ADD THIS WIDGET FOR FORGOT PASSWORD
+        TextButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ForgotPasswordPage()),
+            );
+          },
+          child: const Text('Forgot Password?'),
         ),
         const SizedBox(height: 12),
         
@@ -253,36 +263,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: Text(buttonText),
         ),
       ],
-    );
-  }
-}
-
-// RoleDropdown remains the same for now...
-class RoleDropdown extends StatefulWidget {
-  const RoleDropdown({super.key});
-  @override
-  State<RoleDropdown> createState() => _RoleDropdownState();
-}
-
-class _RoleDropdownState extends State<RoleDropdown> {
-  final List<String> _roles = ['Student', 'Seller', 'Admin'];
-  String? _selectedRole;
-  @override
-  Widget build(BuildContext context) {
-    return DropdownButtonFormField<String>(
-      value: _selectedRole,
-      hint: const Text('Select your role'),
-      decoration: const InputDecoration(
-        prefixIcon: Icon(Icons.person_search_outlined),
-      ),
-      items: _roles.map((String role) {
-        return DropdownMenuItem<String>(value: role, child: Text(role));
-      }).toList(),
-      onChanged: (newValue) {
-        setState(() {
-          _selectedRole = newValue;
-        });
-      },
     );
   }
 }
