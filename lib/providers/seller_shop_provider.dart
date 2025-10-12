@@ -107,27 +107,26 @@ class SellerShopNotifier extends AutoDisposeAsyncNotifier<List<SellerShop>> {
     });
   }
   Future<void> updateBasicShopDetails({
-  required int shopId,
-  required String shopName,
-  required String description,
-  required TimeOfDay openingTime,
-  required TimeOfDay closingTime,
-  required int categoryId,
-}) async {
-  state = const AsyncValue.loading();
-  state = await AsyncValue.guard(() async {
-    await ref.read(shopServiceProvider).updateShopDetails(
-      shopId: shopId,
-      shopName: shopName,
-      description: description,
-      openingTime: openingTime,
-      closingTime: closingTime,
-      categoryId: categoryId,
-    );
-    return ref.read(shopServiceProvider).getSellerShops();
-  });
-}
-
+    required int shopId,
+    required String shopName,
+    required String description,
+    required TimeOfDay openingTime,
+    required TimeOfDay closingTime,
+    required int categoryId,
+  }) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      await ref.read(shopServiceProvider).updateShopDetails(
+        shopId: shopId,
+        shopName: shopName,
+        description: description,
+        openingTime: openingTime,
+        closingTime: closingTime,
+        categoryId: categoryId,
+      );
+      return ref.read(shopServiceProvider).getSellerShops();
+    });
+  }
 } // This brace correctly closes the SellerShopNotifier class.
 
 // The main provider for accessing the notifier and its state

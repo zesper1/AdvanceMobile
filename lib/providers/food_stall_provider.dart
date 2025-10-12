@@ -70,6 +70,34 @@ class FoodStallNotifier extends AutoDisposeAsyncNotifier<List<FoodStall>> {
       }
     });
   }
+  Future<void> submitStallReview({
+    required int stallId,
+    required double rating,
+    required String review,
+  }) async {
+    // 1. Get an instance of the ReviewService from its provider.
+    final reviewService = ref.read(shopServiceProvider);
+
+    // 2. An optional check to ensure the review text isn't empty if that's a requirement.
+    // If the comment is allowed to be empty, you can remove this check.
+    final comment = review.trim().isEmpty ? null : review.trim();
+
+    try {
+      // 3. Call the service to submit the review.
+      // We convert the rating to an integer as required by the database schema.
+      await reviewService.submitReview(
+        shopId: stallId,
+        rating: rating.toInt(),
+        comment: comment,
+      );
+      print('Review submitted successfully for stall ID: $stallId');
+      // OPTIONAL: You could invalidate a provider here to refetch reviews for the stall.
+      // For example: ref.invalidate(stallReviewsProvider(stallId));
+    } catch (e) {
+      print('Failed to submit review: $e');
+      // You can handle the error here, e.g., show a snackbar to the user.
+    }
+  }
 }
 
 // Provider to access the FoodStallNotifier (now an AutoDisposeAsyncNotifier)
